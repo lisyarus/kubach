@@ -17,11 +17,14 @@ main_window::main_window(QGLWidget *parent)
     QApplication::setOverrideCursor(Qt::BlankCursor);
     setMouseTracking(true);
 
-    pl.y = 0.0;
-    pl.z = 5.0;
+    pl.y = 5.0;
     pl.init();
 
-    cubes.emplace_back(0, 0, 0);
+    auto random = std::bind(std::uniform_int_distribution<int>(0, 1), std::default_random_engine());
+
+    for (int x = -10; x <= 10; ++x)
+        for (int z = -10; z <= 10; ++z)
+            cubes.emplace_back(x, random(), z);
 
     has_chosen_plane = false;
 
