@@ -27,6 +27,7 @@ struct player
     void rotate ( ) const;
     void transform ( ) const;
 
+    double distance (const cube & c) const;
     bool has_collision (const cube & c) const;
     bool collide (const cube & c);
 

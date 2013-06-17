@@ -220,6 +220,18 @@ void main_window::paintGL ( )
 
     swapBuffers();
 
+    auto now = std::chrono::high_resolution_clock::now();
+    frames.push(now);
+
+    if (frames.size() >= 5)
+    {
+        double fps = 5000.0 / std::chrono::duration_cast<std::chrono::milliseconds>(now - frames.front()).count();
+        frames.pop();
+        
+        std::ostringstream oss;
+        oss << (int)fps;
+        setWindowTitle(oss.str().c_str());
+    }
 }
 
 void main_window::mouseMoveEvent (QMouseEvent * mouseEvent)
@@ -235,7 +247,6 @@ void main_window::mouseMoveEvent (QMouseEvent * mouseEvent)
         pl.beta += (mouseEvent->y() - height / 2) * speed * 0.05;
         if (pl.beta > 3.1415926535 * 0.5) pl.beta = 3.1415926535 * 0.5;
         if (pl.beta < - 3.1415926535 * 0.5) pl.beta = - 3.1415926535 * 0.5;
-        updateGL();
     }
 }
 
@@ -251,18 +262,22 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
     else if (keyEvent->key() == Qt::Key_W)
     {
         pl.move_forward = 1;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_S)
     {
         pl.move_forward = -1;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_D)
     {
         pl.move_sideward = 1;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_A)
     {
         pl.move_sideward = -1;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_Space)
     {
@@ -271,17 +286,20 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
         else
             if (on_surface)
                 pl.vy = 1.5;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_Shift)
     {
         if (!enable_gravity)
             pl.move_upward = -1;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_G)
     {
         enable_gravity ^= true;
         if (!enable_gravity)
             pl.vy = 0.0;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_O)
     {
@@ -294,6 +312,7 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
             }
         if (!found)
             cubes.emplace_back(0, 0, 0);
+        keyEvent->accept();
     }
 }
 
@@ -302,26 +321,32 @@ void main_window::keyReleaseEvent (QKeyEvent * keyEvent)
     if (keyEvent->key() == Qt::Key_W)
     {
         pl.move_forward = 0;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_S)
     {
         pl.move_forward = 0;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_D)
     {
         pl.move_sideward = 0;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_A)
     {
         pl.move_sideward = 0;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_Space)
     {
         pl.move_upward = 0;
+        keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_Shift)
     {
         pl.move_upward = 0;
+        keyEvent->accept();
     }
 }
 

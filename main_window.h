@@ -7,6 +7,8 @@
 #include <QGLWidget>
 
 #include <vector>
+#include <chrono>
+#include <queue>
 
 class main_window : public QGLWidget
 {
@@ -39,6 +41,8 @@ class main_window : public QGLWidget
     const double g = 1.0;
 
     bool on_surface;
+
+    std::queue<std::chrono::high_resolution_clock::time_point> frames;
     
 public:
     main_window(QGLWidget *parent = 0);

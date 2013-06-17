@@ -48,6 +48,11 @@ bool player::has_collision (const cube & c) const
     return collision;
 }
 
+double player::distance (const cube & c) const
+{
+    return -1;
+}
+
 bool player::collide (const cube & c)
 {
     double tx = _x - c.x;
