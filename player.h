@@ -10,10 +10,10 @@ struct player
     double alpha, beta;
     int move_forward, move_sideward, move_upward;
 
-    const double size_x = 0.4;
-    const double size_y_top = 0.2;
-    const double size_y_bottom = 1.2;
-    const double size_z = 0.4;
+    static const double size_x;
+    static const double size_y_top;
+    static const double size_y_bottom;
+    static const double size_z;
 
     player ( )
         : x(0.0), y(0.0), z(0.0),

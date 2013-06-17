@@ -3,6 +3,7 @@
 
 #include "player.h"
 #include "cube.h"
+#include "kubeman.h"
 
 #include <QGLWidget>
 
@@ -17,7 +18,7 @@ class main_window : public QGLWidget
     int width, height;
     player pl;
 
-    static constexpr double speed = 0.15;
+    static constexpr double speed = 8;
 
     QPoint mouse_pos;
 
@@ -38,11 +39,15 @@ class main_window : public QGLWidget
 
     bool show_grid;
     bool enable_gravity;
-    const double g = 1.0;
+    const double g = 7;
 
     bool on_surface;
 
+    static const int average_frames = 10;
+    double last_frame;
     std::queue<std::chrono::high_resolution_clock::time_point> frames;
+
+    std::vector<kubeman> kubemen;
     
 public:
     main_window(QGLWidget *parent = 0);

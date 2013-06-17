@@ -30,7 +30,9 @@ main_window::main_window(QGLWidget *parent)
     enable_gravity = false;
     on_surface = false;
 
-    startTimer(20);
+    last_frame = 0.0;
+
+    startTimer(25);
 }
 
 main_window::~main_window()
@@ -52,7 +54,7 @@ void main_window::initializeGL ( )
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    auto random = std::bind(std::uniform_int_distribution<unsigned char>(127, 255), std::default_random_engine());
+    auto random = std::bind(std::uniform_int_distribution<unsigned char>(192, 255), std::default_random_engine());
     for (int x = 0; x < texture_size; ++x)
     {
         for (int y = 0; y < texture_size; ++y)
@@ -199,10 +201,14 @@ void main_window::paintGL ( )
         has_chosen_plane = false;
     }
 
-    glDisable(GL_DEPTH_TEST);
     glDisable(GL_TEXTURE_2D);
 
-    glMatrixMode(GL_MODELVIEW);
+    glColor3ub(255, 0, 0);
+    for (const kubeman & k : kubemen)
+        k.draw();
+
+    glDisable(GL_DEPTH_TEST);
+
     glLoadIdentity();
 
     glMatrixMode(GL_PROJECTION);
@@ -211,6 +217,7 @@ void main_window::paintGL ( )
 
     glMatrixMode(GL_MODELVIEW);
 
+    glColor3ub(255, 255, 255);
     glBegin(GL_LINES);
         glVertex2d(-cross_size, 0.0);
         glVertex2d(cross_size, 0.0);
@@ -221,11 +228,14 @@ void main_window::paintGL ( )
     swapBuffers();
 
     auto now = std::chrono::high_resolution_clock::now();
+    if (!frames.empty())
+        last_frame = 0.001 * std::chrono::duration_cast<std::chrono::milliseconds>(now - frames.back()).count();
+
     frames.push(now);
 
-    if (frames.size() >= 5)
+    if (frames.size() > average_frames)
     {
-        double fps = 5000.0 / std::chrono::duration_cast<std::chrono::milliseconds>(now - frames.front()).count();
+        double fps = average_frames * 1000.0 / std::chrono::duration_cast<std::chrono::milliseconds>(now - frames.front()).count();
         frames.pop();
         
         std::ostringstream oss;
@@ -243,8 +253,8 @@ void main_window::mouseMoveEvent (QMouseEvent * mouseEvent)
     else
     {
         QCursor::setPos(normalGeometry().topLeft() + QPoint(width / 2, height / 2));
-        pl.alpha += (mouseEvent->x() - width / 2) * speed * 0.05;
-        pl.beta += (mouseEvent->y() - height / 2) * speed * 0.05;
+        pl.alpha += (mouseEvent->x() - width / 2) * 0.0075;
+        pl.beta += (mouseEvent->y() - height / 2) * 0.0075;
         if (pl.beta > 3.1415926535 * 0.5) pl.beta = 3.1415926535 * 0.5;
         if (pl.beta < - 3.1415926535 * 0.5) pl.beta = - 3.1415926535 * 0.5;
     }
@@ -352,7 +362,7 @@ void main_window::keyReleaseEvent (QKeyEvent * keyEvent)
 
 void main_window::mousePressEvent (QMouseEvent * mouseEvent)
 {
-    if (mouseEvent->button() == Qt::MouseButton::LeftButton)
+    if (mouseEvent->button() == Qt::MouseButton::RightButton)
     {
         if (has_chosen_plane)
         {
@@ -361,7 +371,7 @@ void main_window::mousePressEvent (QMouseEvent * mouseEvent)
                 cubes.push_back(to_add);
         }
     }
-    else if (mouseEvent->button() == Qt::MouseButton::RightButton)
+    else if (mouseEvent->button() == Qt::MouseButton::LeftButton)
     {
         if (has_chosen_plane)
         {
@@ -373,8 +383,8 @@ void main_window::mousePressEvent (QMouseEvent * mouseEvent)
 void main_window::timerEvent (QTimerEvent *)
 {
     if (enable_gravity)
-        pl.vy -= g * 0.1;
-    pl.move(speed);
+        pl.vy -= g * last_frame;
+    pl.move(speed * last_frame);
     on_surface = false;
     for (const cube & c : cubes)
         on_surface |= pl.collide(c);

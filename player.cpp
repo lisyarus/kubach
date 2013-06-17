@@ -3,6 +3,11 @@
 #include <QtOpenGL>
 #include <cmath>
 
+const double player::size_x = 0.4;
+const double player::size_y_top = 0.2;
+const double player::size_y_bottom = 1.2;
+const double player::size_z = 0.4;
+
 void player::move (double step)
 {
     double scale = step;
@@ -77,14 +82,17 @@ bool player::collide (const cube & c)
         }
         else if (dy > dz)
         {
-            if (ty > 0 && ty < 0.5 + size_y_bottom)
+            if (dx < 0.5 && dz < 0.5)
             {
-                y = c.y + 0.5 + size_y_bottom;
-                on_surface = true;
+                if (ty > 0 && ty < 0.5 + size_y_bottom)
+                {
+                    y = c.y + 0.5 + size_y_bottom;
+                    on_surface = true;
+                    vy = 0.0;
+                }
+                if (ty < 0 && ty > - 0.5 - size_y_top) y = c.y - 0.5 - size_y_top;
+                _y = y;
             }
-            if (ty < 0 && ty > - 0.5 - size_y_top) y = c.y - 0.5 - size_y_top;
-            _y = y;
-            vy = 0.0;
         }
         else
         {

@@ -12,5 +12,7 @@ QT += core gui opengl
 LIBS += -lGLU
 
 # Input
-HEADERS += cube.h main_window.h player.h
-SOURCES += cube.cpp main.cpp main_window.cpp player.cpp
+HEADERS += cube.h main_window.h player.h \
+    kubeman.h
+SOURCES += cube.cpp main.cpp main_window.cpp player.cpp \
+    kubeman.cpp
