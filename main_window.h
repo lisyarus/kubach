@@ -48,13 +48,15 @@ class main_window : public QGLWidget
     std::vector<kubeman> kubemen;
 
     double brightness, hue;
+    double discrete_brightness ( ) const;
+    double discrete_hue ( ) const;
 
     color get_color (double brightness, double hue) const;
     color get_current_color ( ) const;
     void set_color (color c) const;
 
-    const int sphere_x = 24;
-    const int sphere_y = 16;
+    const int sphere_x = 12;
+    const int sphere_y = 4;
 
     bool rainbow;
     

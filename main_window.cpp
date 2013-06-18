@@ -45,7 +45,8 @@ main_window::main_window(QGLWidget *parent)
             cubes.emplace_back(10, y, z, get_current_color());
         }
 
-    brightness = 1.0;
+    brightness = 1.0 + 0.5 / sphere_y;
+    hue = -3.0 / sphere_x;
 
     has_chosen_plane = false;
 
@@ -142,7 +143,7 @@ color main_window::get_color (double brightness, double hue) const
 
 color main_window::get_current_color ( ) const
 {
-    color res = get_color(brightness, hue);
+    color res = get_color(discrete_brightness(), discrete_hue());
     res.data[3] = 0.5;
     return res;
 }
@@ -150,6 +151,24 @@ color main_window::get_current_color ( ) const
 void main_window::set_color (color c) const
 {
     glColor4dv(c.data);
+}
+
+int truncate (double x, int add)
+{
+    if (x >= 0)
+        return x + add;
+    else
+        return x + add - 1;
+}
+
+double main_window::discrete_brightness ( ) const
+{
+    return truncate((brightness - 1.0) * sphere_y, 0) / static_cast<double>(sphere_y) + 1.0;
+}
+
+double main_window::discrete_hue ( ) const
+{
+    return truncate(hue * sphere_x / 6.0, 1) / static_cast<double>(sphere_x) * 6.0;
 }
 
 void main_window::paintGL ( )
@@ -197,8 +216,6 @@ void main_window::paintGL ( )
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
-
-    int chosen_index = chosen_cube_index * 6 + chosen_plane_index;
 
     glVertexPointer(3, GL_DOUBLE, 0, vertices.data());
     glTexCoordPointer(2, GL_DOUBLE, 0, tex_coords.data());
@@ -322,13 +339,13 @@ void main_window::paintGL ( )
             double ax = (x - hue * sphere_x / 6.0 + sphere_x * 0.25) * dx;
             double ay = (y) * dy;
             glBegin(GL_QUADS);
-                set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x) / sphere_x * 6.0));
-                glVertex3d(cos(ax) * cos(ay), sin(ay), sin(ax) * cos(ay));
                 set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
+                glVertex3d(cos(ax) * cos(ay), sin(ay), sin(ax) * cos(ay));
+                //set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
                 glVertex3d(cos(ax + dx) * cos(ay), sin(ay), sin(ax + dx) * cos(ay));
-                set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
+                //set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
                 glVertex3d(cos(ax + dx) * cos(ay + dy), sin(ay + dy), sin(ax + dx) * cos(ay + dy));
-                set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x) / sphere_x * 6.0));
+                //set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x) / sphere_x * 6.0));
                 glVertex3d(cos(ax) * cos(ay + dy), sin(ay + dy), sin(ax) * cos(ay + dy));
             glEnd();
         }
@@ -538,7 +555,7 @@ void main_window::mouseReleaseEvent (QMouseEvent * mouseEvent)
 
 void main_window::wheelEvent (QWheelEvent * event)
 {
-    hue += event->delta() * 0.0025;
+    hue += event->delta() / 120.0 * 6.0 / sphere_x;
 }
 
 void main_window::timerEvent (QTimerEvent *)
