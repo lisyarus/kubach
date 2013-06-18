@@ -30,14 +30,12 @@ class main_window : public QGLWidget
 
     static const int texture_size = 64;
     unsigned char texture[3 * texture_size * texture_size];
-    unsigned char choose_texture[3 * texture_size * texture_size];
-    unsigned int texture_id, choose_texture_id;
+    unsigned int texture_id;
 
     bool has_chosen_plane;
     int chosen_cube_index;
     int chosen_plane_index;
 
-    bool show_grid;
     bool enable_gravity;
     const double g = 7;
 
@@ -49,8 +47,16 @@ class main_window : public QGLWidget
 
     std::vector<kubeman> kubemen;
 
-    const double rainbows[9][3] = {{1.0, 0.0, 0.0}, {1.0, 0.5, 0.0}, {0.5, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.5}, {0.0, 0.5, 1.0}, {0.0, 0.0, 1.0}, {0.5, 0.0, 1.0}, {1.0, 0.0, 0.5}};
-    std::function<int ()> next_rainbow;
+    double brightness, hue;
+
+    color get_color (double brightness, double hue) const;
+    color get_current_color ( ) const;
+    void set_color (color c) const;
+
+    const int sphere_x = 24;
+    const int sphere_y = 16;
+
+    bool rainbow;
     
 public:
     main_window(QGLWidget *parent = 0);
@@ -65,6 +71,9 @@ public:
     void keyReleaseEvent(QKeyEvent * keyEvent) override;
 
     void mousePressEvent (QMouseEvent * mouseEvent) override;
+    void mouseReleaseEvent (QMouseEvent * mouseEvent) override;
+
+    void wheelEvent (QWheelEvent * event) override;
 
     void timerEvent (QTimerEvent *);
 };

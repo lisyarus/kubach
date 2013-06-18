@@ -10,6 +10,7 @@
 #include <sstream>
 
 #include <GL/glu.h>
+#include <cmath>
 
 main_window::main_window(QGLWidget *parent)
     : QGLWidget (parent)
@@ -17,38 +18,38 @@ main_window::main_window(QGLWidget *parent)
     QApplication::setOverrideCursor(Qt::BlankCursor);
     setMouseTracking(true);
 
+    brightness = 2.0;
+    hue = 0.0;
+
     pl.y = 5.0;
     pl.init();
 
-    next_rainbow = [](){
-        static auto gen = std::bind(std::uniform_int_distribution<int>(0, 8), std::default_random_engine());
-        return gen();
-    };
-
     for (int x = -10; x <= 10; ++x)
         for (int z = -10; z <= 10; ++z)
-            cubes.emplace_back(x, 0, z, rainbows[next_rainbow()]);
+            cubes.emplace_back(x, 0, z, get_current_color());
 
     for (int x = -10; x <= 10; ++x)
         for (int y = 1; y <= 10; ++y)
         {
-            cubes.emplace_back(x, y, -10, rainbows[next_rainbow()]);
-            cubes.emplace_back(x, y, 10, rainbows[next_rainbow()]);
+            cubes.emplace_back(x, y, -10, get_current_color());
+            cubes.emplace_back(x, y, 10, get_current_color());
         }
 
     for (int z = -9; z <= 9; ++z)
         for (int y = 1; y <= 10; ++y)
         {
-            cubes.emplace_back(-10, y, z, rainbows[next_rainbow()]);
-            cubes.emplace_back(10, y, z, rainbows[next_rainbow()]);
+            cubes.emplace_back(-10, y, z, get_current_color());
+            cubes.emplace_back(10, y, z, get_current_color());
         }
+
+    brightness = 1.0;
 
     has_chosen_plane = false;
 
-    show_grid = false;
-
     enable_gravity = true;
     on_surface = false;
+
+    rainbow = false;
 
     last_frame = 0.0;
     startTimer(20);
@@ -59,28 +60,16 @@ main_window::~main_window()
 
 void main_window::initializeGL ( )
 {
-    glClearColor(0.0, 0.0, 0.25, 1.0);
+    glClearColor(1.0, 1.0, 1.0, 1.0);
     glDepthFunc(GL_LEQUAL);
 
     glGenTextures(1, &texture_id);
-    glGenTextures(1, &choose_texture_id);
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    glBindTexture(GL_TEXTURE_2D, choose_texture_id);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    auto safe_add = [] (unsigned char c, unsigned char a) -> unsigned char
-    {
-        unsigned int t = static_cast<unsigned int>(c) + a;
-        if (t > 255) t = 255;
-        return static_cast<unsigned char>(t);
-    };
-
-    auto random = std::bind(std::uniform_int_distribution<unsigned char>(192, 255), std::default_random_engine());
+    auto random = std::bind(std::uniform_int_distribution<unsigned char>(240, 255), std::default_random_engine());
     for (int x = 0; x < texture_size; ++x)
     {
         for (int y = 0; y < texture_size; ++y)
@@ -90,19 +79,12 @@ void main_window::initializeGL ( )
 
             texture[x * texture_size * 3 + y * 3 + 0] = border ? 0 : value;
             texture[x * texture_size * 3 + y * 3 + 1] = border ? 0 : value;
-            texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : safe_add(value, 32);
-
-            choose_texture[x * texture_size * 3 + y * 3 + 0] = border ? 0 : value;
-            choose_texture[x * texture_size * 3 + y * 3 + 1] = border ? 255 : value;
-            choose_texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : safe_add(value, 32);
+            texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : value;
         }
     }
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, 3, texture_size, texture_size, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
-
-    glBindTexture(GL_TEXTURE_2D, choose_texture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, 3, texture_size, texture_size, 0, GL_RGB, GL_UNSIGNED_BYTE, choose_texture);
 }
 
 void main_window::resizeGL (int width, int height)
@@ -120,6 +102,53 @@ void main_window::resizeGL (int width, int height)
     glViewport(0, 0, width, height);
 }
 
+color main_window::get_color (double brightness, double hue) const
+{
+    while (hue < 0.0) hue += 6.0;
+    while (hue >= 6.0) hue -= 6.0;
+
+    color res;
+    if (hue >= 0.0 && hue < 1.0)
+        res = color(1.0, hue, 0.0);
+    else if (hue >= 1.0 && hue < 2.0)
+        res = color(2.0 - hue, 1.0, 0.0);
+    else if (hue >= 2.0 && hue < 3.0)
+        res = color(0.0, 1.0, hue - 2.0);
+    else if (hue >= 3.0 && hue < 4.0)
+        res = color(0.0, 4.0 - hue, 1.0);
+    else if (hue >= 4.0 && hue < 5.0)
+        res = color(hue - 4.0, 0.0, 1.0);
+    else if (hue >= 5.0 && hue < 6.0)
+        res = color(1.0, 0.0, 6.0 - hue);
+
+    if (brightness < 1.0)
+    {
+        res.data[0] *= brightness;
+        res.data[1] *= brightness;
+        res.data[2] *= brightness;
+    }
+    else
+    {
+        brightness -= 1.0;
+        res.data[0] += (1.0 - res.data[0]) * brightness;
+        res.data[1] += (1.0 - res.data[1]) * brightness;
+        res.data[2] += (1.0 - res.data[2]) * brightness;
+    }
+    return res;
+}
+
+color main_window::get_current_color ( ) const
+{
+    color res = get_color(brightness, hue);
+    res.data[3] = 0.5;
+    return res;
+}
+
+void main_window::set_color (color c) const
+{
+    glColor4dv(c.data);
+}
+
 void main_window::paintGL ( )
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -133,23 +162,6 @@ void main_window::paintGL ( )
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
     pl.transform();
-
-
-    glDisable(GL_TEXTURE_2D);
-    glColor3f(1.0, 1.0, 1.0);
-    if (show_grid)
-    {
-        glBegin(GL_LINES);
-            for (int i = -10; i <= 10; ++i)
-            {
-                glVertex3d(i, 0.0, -10.0);
-                glVertex3d(i, 0.0, 10.0);
-
-                glVertex3d(-10.0, 0.0, i);
-                glVertex3d(10.0, 0.0, i);
-            }
-        glEnd();
-    }
 
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texture_id);
@@ -171,10 +183,10 @@ void main_window::paintGL ( )
                 tex_coords.push_back(plane::tex_coords[v]);
             for (int v = 0; v < 4; ++v)
             {
-                colors[c * 6 * 16 + p * 16 + v * 4 + 0] = cubes[c].r;
-                colors[c * 6 * 16 + p * 16 + v * 4 + 1] = cubes[c].g;
-                colors[c * 6 * 16 + p * 16 + v * 4 + 2] = cubes[c].b;
-                colors[c * 6 * 16 + p * 16 + v * 4 + 3] = 0.5;
+                colors[c * 6 * 16 + p * 16 + v * 4 + 0] = cubes[c].c.data[0];
+                colors[c * 6 * 16 + p * 16 + v * 4 + 1] = cubes[c].c.data[1];
+                colors[c * 6 * 16 + p * 16 + v * 4 + 2] = cubes[c].c.data[2];
+                colors[c * 6 * 16 + p * 16 + v * 4 + 3] = cubes[c].c.data[3];
             }
         }
     }
@@ -277,6 +289,66 @@ void main_window::paintGL ( )
         glVertex2d(0.0, cross_size);
     glEnd();
 
+    glClear(GL_DEPTH_BUFFER_BIT);
+    glEnable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    glOrtho(-ratio, ratio, -1.0, 1.0, -1.0, 10.0);
+    //glFrustum(- ratio * 0.01, ratio * 0.01, -0.01, 0.01, 0.01, 1000.0);
+
+    glMatrixMode(GL_MODELVIEW);
+    if (rainbow)
+    {
+        glScaled(0.8, 0.8, 0.8);
+    }
+    else
+    {
+        glScaled(0.2, 0.2, 0.2);
+        glTranslated(0.0, -4.0, -5.0);
+    }
+    glPushMatrix();
+    glRotated((brightness - 1.0) * 90, 1.0, 0.0, 0.0);
+
+    for (int x = 0; x < sphere_x; ++x)
+    {
+        for (int y = -sphere_y; y < sphere_y; ++y)
+        {
+            double dx = 2.0 * 3.1415926535 / sphere_x;
+            double dy = 0.5 * 3.1415926535 / sphere_y;
+            double ax = (x - hue * sphere_x / 6.0 + sphere_x * 0.25) * dx;
+            double ay = (y) * dy;
+            glBegin(GL_QUADS);
+                set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x) / sphere_x * 6.0));
+                glVertex3d(cos(ax) * cos(ay), sin(ay), sin(ax) * cos(ay));
+                set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
+                glVertex3d(cos(ax + dx) * cos(ay), sin(ay), sin(ax + dx) * cos(ay));
+                set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
+                glVertex3d(cos(ax + dx) * cos(ay + dy), sin(ay + dy), sin(ax + dx) * cos(ay + dy));
+                set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x) / sphere_x * 6.0));
+                glVertex3d(cos(ax) * cos(ay + dy), sin(ay + dy), sin(ax) * cos(ay + dy));
+            glEnd();
+        }
+    }
+    glPopMatrix();
+
+    if (rainbow)
+    {
+        glDisable(GL_DEPTH_TEST);
+        set_color(get_current_color());
+        glBegin(GL_TRIANGLES);
+            glVertex3d(-0.1, -0.05, 1.1);
+            glVertex3d(0.0, 0.0, 1.0);
+            glVertex3d(0.1, -0.05, 1.1);
+        glEnd();
+        glColor3f(0.0, 0.0, 0.0);
+        glBegin(GL_LINE_LOOP);
+            glVertex3d(-0.1, -0.05, 1.1);
+            glVertex3d(0.0, 0.0, 1.0);
+            glVertex3d(0.1, -0.05, 1.1);
+        glEnd();
+    }
+
     swapBuffers();
 
     auto now = std::chrono::high_resolution_clock::now();
@@ -291,6 +363,7 @@ void main_window::paintGL ( )
         frames.pop();
         
         std::ostringstream oss;
+        oss << "Kubach. Try mouse buttons! FPS: ";
         oss << (int)fps;
         setWindowTitle(oss.str().c_str());
     }
@@ -302,6 +375,14 @@ void main_window::mouseMoveEvent (QMouseEvent * mouseEvent)
 
     if (first)
         first = false;
+    else if (rainbow)
+    {
+        QCursor::setPos(normalGeometry().topLeft() + QPoint(width / 2, height / 2));
+        brightness -= (mouseEvent->y() - height / 2) * 0.0075;
+        if (brightness > 2.0) brightness = 2.0;
+        if (brightness < 0.0) brightness = 0.0;
+        hue -= (mouseEvent->x() - width / 2) * 0.0075;
+    }
     else
     {
         QCursor::setPos(normalGeometry().topLeft() + QPoint(width / 2, height / 2));
@@ -373,7 +454,7 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
                 break;
             }
         if (!found)
-            cubes.emplace_back(0, 0, 0, rainbows[next_rainbow()]);
+            cubes.emplace_back(0, 0, 0, get_current_color());
         keyEvent->accept();
     }
 }
@@ -418,7 +499,7 @@ void main_window::mousePressEvent (QMouseEvent * mouseEvent)
     {
         if (has_chosen_plane)
         {
-            cube to_add = cubes[chosen_cube_index].planes[chosen_plane_index].adjacent_cube(rainbows[next_rainbow()]);
+            cube to_add = cubes[chosen_cube_index].planes[chosen_plane_index].adjacent_cube(get_current_color());
             if (!pl.has_collision(to_add))
                 cubes.push_back(to_add);
         }
@@ -430,6 +511,23 @@ void main_window::mousePressEvent (QMouseEvent * mouseEvent)
             cubes.erase(cubes.begin() + chosen_cube_index);
         }
     }
+    else if (mouseEvent->button() == Qt::MouseButton::MiddleButton)
+    {
+        rainbow = true;
+    }
+}
+
+void main_window::mouseReleaseEvent (QMouseEvent * mouseEvent)
+{
+    if (mouseEvent->button() == Qt::MouseButton::MiddleButton)
+    {
+        rainbow = false;
+    }
+}
+
+void main_window::wheelEvent (QWheelEvent * event)
+{
+    hue += event->delta() * 0.0025;
 }
 
 void main_window::timerEvent (QTimerEvent *)
