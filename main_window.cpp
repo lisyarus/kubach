@@ -22,6 +22,7 @@ main_window::main_window(QGLWidget *parent)
     hue = 0.0;
 
     pl.y = 5.0;
+    pl.vy = 1.5;
     pl.init();
 
     for (int x = -10; x <= 10; ++x)
@@ -456,6 +457,14 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
         if (!found)
             cubes.emplace_back(0, 0, 0, get_current_color());
         keyEvent->accept();
+    }
+    else if (keyEvent->key() == Qt::Key_R)
+    {
+        pl.x = 0.0;
+        pl.y = 5.0;
+        pl.z = 0.0;
+        pl.vy = 1.5;
+        pl.init();
     }
 }
 
