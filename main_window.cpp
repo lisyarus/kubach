@@ -281,7 +281,7 @@ void main_window::paintGL ( )
 
     glMatrixMode(GL_MODELVIEW);
 
-    glColor3ub(255, 255, 255);
+    set_color(get_color(2.0 - brightness, hue + 3.0));
     glBegin(GL_LINES);
         glVertex2d(-cross_size, 0.0);
         glVertex2d(cross_size, 0.0);
