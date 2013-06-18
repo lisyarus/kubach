@@ -48,6 +48,9 @@ class main_window : public QGLWidget
     std::queue<std::chrono::high_resolution_clock::time_point> frames;
 
     std::vector<kubeman> kubemen;
+
+    const double rainbows[9][3] = {{1.0, 0.0, 0.0}, {1.0, 0.5, 0.0}, {0.5, 1.0, 0.0}, {0.0, 1.0, 0.0}, {0.0, 1.0, 0.5}, {0.0, 0.5, 1.0}, {0.0, 0.0, 1.0}, {0.5, 0.0, 1.0}, {1.0, 0.0, 0.5}};
+    std::function<int ()> next_rainbow;
     
 public:
     main_window(QGLWidget *parent = 0);

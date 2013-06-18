@@ -12,20 +12,22 @@ struct plane
     void draw ( ) const;
 
     int cx, cy, cz, dx, dy, dz;
-    cube adjacent_cube ( ) const;
+    cube adjacent_cube (const double* colors) const;
 };
 
 bool operator == (const plane & p1, const plane & p2);
 
 struct cube
 {
-    cube (int x, int y, int z);
+    cube (int x, int y, int z, const double* colors);
 
     void draw ( ) const;
 
     plane planes[6];
 
     int x, y, z;
+
+    double r, g, b;
 };
 
 #endif // CUBE_H

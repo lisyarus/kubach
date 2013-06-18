@@ -21,13 +21,13 @@ void plane::draw ( ) const
     glEnd();
 }
 
-cube plane::adjacent_cube ( ) const
+cube plane::adjacent_cube (const double * colors) const
 {
-    return cube(cx + dx, cy + dy, cz + dz);
+    return cube(cx + dx, cy + dy, cz + dz, colors);
 }
 
-cube::cube (int x, int y, int z)
-    : x(x), y(y), z(z)
+cube::cube (int x, int y, int z, const double* colors)
+    : x(x), y(y), z(z), r(colors[0]), g(colors[1]), b(colors[2])
 {
     for (int p = 0; p < 6; ++p)
     {
