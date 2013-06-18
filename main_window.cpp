@@ -222,6 +222,7 @@ void main_window::paintGL ( )
     glColorPointer(4, GL_DOUBLE, 0, colors.data());
     glDrawArrays(GL_QUADS, 0, cubes.size() * 6 * 4);
 
+
     unsigned int buffer[512];
     unsigned int hits;
     glSelectBuffer(512, buffer);
@@ -381,7 +382,7 @@ void main_window::paintGL ( )
     {
         double fps = average_frames * 1000.0 / std::chrono::duration_cast<std::chrono::milliseconds>(now - frames.front()).count();
         frames.pop();
-        
+
         std::ostringstream oss;
         oss << "Kubach. Try mouse buttons! FPS: ";
         oss << (int)fps;
@@ -566,5 +567,6 @@ void main_window::timerEvent (QTimerEvent *)
     on_surface = false;
     for (const cube & c : cubes)
         on_surface |= pl.collide(c);
-    updateGL();
+    //updateGL();
+    paintGL();
 }
