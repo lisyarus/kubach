@@ -20,17 +20,29 @@ main_window::main_window(QGLWidget *parent)
     pl.y = 5.0;
     pl.init();
 
-    auto random = std::bind(std::uniform_int_distribution<int>(0, 1), std::default_random_engine());
-
     for (int x = -10; x <= 10; ++x)
         for (int z = -10; z <= 10; ++z)
-            cubes.emplace_back(x, random(), z);
+            cubes.emplace_back(x, 0, z);
+
+    for (int x = -10; x <= 10; ++x)
+        for (int y = 1; y <= 10; ++y)
+        {
+            cubes.emplace_back(x, y, -10);
+            cubes.emplace_back(x, y, 10);
+        }
+
+    for (int z = -9; z <= 9; ++z)
+        for (int y = 1; y <= 10; ++y)
+        {
+            cubes.emplace_back(-10, y, z);
+            cubes.emplace_back(10, y, z);
+        }
 
     has_chosen_plane = false;
 
     show_grid = false;
 
-    enable_gravity = false;
+    enable_gravity = true;
     on_surface = false;
 
     last_frame = 0.0;
@@ -50,12 +62,19 @@ void main_window::initializeGL ( )
     glGenTextures(1, &choose_texture_id);
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
     glBindTexture(GL_TEXTURE_2D, choose_texture_id);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    auto safe_add = [] (unsigned char c, unsigned char a) -> unsigned char
+    {
+        unsigned int t = static_cast<unsigned int>(c) + a;
+        if (t > 255) t = 255;
+        return static_cast<unsigned char>(t);
+    };
 
     auto random = std::bind(std::uniform_int_distribution<unsigned char>(192, 255), std::default_random_engine());
     for (int x = 0; x < texture_size; ++x)
@@ -67,11 +86,11 @@ void main_window::initializeGL ( )
 
             texture[x * texture_size * 3 + y * 3 + 0] = border ? 0 : value;
             texture[x * texture_size * 3 + y * 3 + 1] = border ? 0 : value;
-            texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : value;
+            texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : safe_add(value, 32);
 
             choose_texture[x * texture_size * 3 + y * 3 + 0] = border ? 0 : value;
             choose_texture[x * texture_size * 3 + y * 3 + 1] = border ? 255 : value;
-            choose_texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : value;
+            choose_texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : safe_add(value, 32);
         }
     }
 
