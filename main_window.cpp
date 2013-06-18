@@ -47,7 +47,7 @@ main_window::main_window(QGLWidget *parent)
 
     last_frame = 0.0;
 
-    startTimer(25);
+    startTimer(20);
 }
 
 main_window::~main_window()
@@ -149,18 +149,37 @@ void main_window::paintGL ( )
 
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texture_id);
+
+    std::vector<double> vertices;
+    std::vector<double> tex_coords;
+    vertices.reserve(cubes.size() * 6 * 12);
+    tex_coords.reserve(cubes.size() * 6 * 8);
+
     for (size_t c = 0; c < cubes.size(); ++c)
     {
         for (int p = 0; p < 6; ++p)
         {
-            bool chosen = has_chosen_plane && chosen_cube_index == c && chosen_plane_index == p;
+            for (int v = 0; v < 12; ++v)
+                vertices.push_back(cubes[c].planes[p].coords[v]);
+            for (int v = 0; v < 8; ++v)
+                tex_coords.push_back(plane::tex_coords[v]);
+            /*bool chosen = has_chosen_plane && chosen_cube_index == c && chosen_plane_index == p;
             if (chosen)
                 glBindTexture(GL_TEXTURE_2D, choose_texture_id);
             cubes[c].planes[p].draw();
             if (chosen)
-                glBindTexture(GL_TEXTURE_2D, texture_id);
+                glBindTexture(GL_TEXTURE_2D, texture_id);*/
         }
     }
+
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+    int chosen_index = chosen_cube_index * 6 + chosen_plane_index;
+
+    glVertexPointer(3, GL_DOUBLE, 0, vertices.data());
+    glTexCoordPointer(2, GL_DOUBLE, 0, tex_coords.data());
+    glDrawArrays(GL_QUADS, 0, cubes.size() * 6 * 4);
 
     unsigned int buffer[512];
     unsigned int hits;
@@ -179,12 +198,14 @@ void main_window::paintGL ( )
     gluPerspective(45.0f, (GLfloat) (viewport[2]-viewport[0])/(GLfloat) (viewport[3]-viewport[1]), 0.1f, 100.0f);
     glMatrixMode(GL_MODELVIEW);
 
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+
     for (size_t c = 0; c < cubes.size(); ++c)
     {
         for (int p = 0; p < 6; ++p)
         {
             glLoadName(c * 6 + p);
-            cubes[c].planes[p].draw();
+            glDrawArrays(GL_QUADS, (c * 6 + p) * 4, 4);
         }
     }
 
