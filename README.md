@@ -2,6 +2,10 @@ A tiny minecraft-like game with lots of colors and fun!
 
 [W] [A] [S] [D] - move around
 
+Space - move up / jump
+
+Shift - move down
+
 Left mouse button - destroy cube
 
 Right mouse button - create cube

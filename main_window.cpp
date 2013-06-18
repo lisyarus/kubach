@@ -18,6 +18,8 @@ main_window::main_window(QGLWidget *parent)
     QApplication::setOverrideCursor(Qt::BlankCursor);
     setMouseTracking(true);
 
+    setFixedSize(800, 600);
+
     brightness = 2.0;
     hue = 0.0;
 
