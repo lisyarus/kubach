@@ -20,9 +20,6 @@ main_window::main_window(QGLWidget *parent)
 
     setFixedSize(800, 600);
 
-    brightness = 0.7;
-    hue = 1.0;
-
     auto randomc = std::bind(std::uniform_int_distribution<int>(0, world_size - 1), std::default_random_engine());
     auto randomh = std::bind(std::uniform_int_distribution<int>(-3, 3), std::default_random_engine());
 
@@ -46,17 +43,19 @@ main_window::main_window(QGLWidget *parent)
                 }
     }
 
-    hue = 0.0;
-    brightness = 0.4;
     for (int x = 0; x < world_size; ++x)
         for (int z = 0; z < world_size; ++z)
         {
+            hue = 0.0;
+            brightness = 0.4;
             for (int y = -5; y < height[x][z]; ++y)
                 add_cube(x, y, z);
             if (height[x][z] >= 0)
             {
                 add_cube(x, height[x][z], z);
-                cubes.back().planes[2].c = get_color(0.7, 1.5);
+                hue = 1.0;
+                brightness = 0.7;
+                cubes.back().planes[2].c = get_current_color();
             }
         }
 
@@ -71,7 +70,7 @@ main_window::main_window(QGLWidget *parent)
 
     has_chosen_plane = false;
 
-    enable_gravity = false;
+    enable_gravity = true;
     on_surface = false;
 
     rainbow = false;
