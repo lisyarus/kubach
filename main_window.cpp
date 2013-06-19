@@ -259,11 +259,6 @@ void main_window::paintGL ( )
             {
                 for (int ci = 0; ci < 4; ++ci)
                     colors.push_back(cubes[c].planes[p].c.data[ci]);
-                if (chosen_cube_index == c && chosen_plane_index == p)
-                {
-                    for (int i = colors.size() - 4; i < colors.size(); ++i)
-                        colors[i] += (1.0 - colors[i]) * 0.5;
-                }
             }
         }
     }
@@ -275,8 +270,6 @@ void main_window::paintGL ( )
     glVertexPointer(3, GL_DOUBLE, 0, vertices.data());
     glTexCoordPointer(2, GL_DOUBLE, 0, tex_coords.data());
     glColorPointer(4, GL_DOUBLE, 0, colors.data());
-    glDrawArrays(GL_QUADS, 0, indices.size() * 4);
-
 
     unsigned int buffer[512];
     int hits;
@@ -294,8 +287,6 @@ void main_window::paintGL ( )
     gluPickMatrix(width * 0.5, height * 0.5, 1.0, 1.0, viewport);
     gluPerspective(45.0f, (GLfloat) (viewport[2]-viewport[0])/(GLfloat) (viewport[3]-viewport[1]), 0.1f, 100.0f);
     glMatrixMode(GL_MODELVIEW);
-
-    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
     for (int i = 0; i < indices.size(); ++i)
     {
@@ -339,6 +330,22 @@ void main_window::paintGL ( )
     {
         has_chosen_plane = false;
     }
+
+    if (has_chosen_plane)
+    for (int i = 0; i < indices.size(); ++i)
+    {
+        if (indices[i] == chosen_cube_index * 6 + chosen_plane_index)
+        {
+            for (int v = 0; v < 4; ++v)
+            {
+                colors[16 * i + v * 4 + 0] += 0.2;
+                colors[16 * i + v * 4 + 1] += 0.2;
+                colors[16 * i + v * 4 + 2] += 0.2;
+            }
+        }
+    }
+
+    glDrawArrays(GL_QUADS, 0, indices.size() * 4);
 
     glDisable(GL_TEXTURE_2D);
 
