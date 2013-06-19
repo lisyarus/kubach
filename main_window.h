@@ -62,6 +62,8 @@ class main_window : public QGLWidget
 
     void add_cube (int x, int y, int z);
 
+    double sphere_hue, sphere_brightness;
+
     const int sphere_x = 12;
     const int sphere_y = 4;
 

@@ -43,29 +43,22 @@ main_window::main_window(QGLWidget *parent)
                 }
     }
 
-    hue = 1.0;
-    brightness = 0.7;
-    color green = get_current_color();
     hue = 0.0;
     brightness = 0.4;
-    color brown = get_current_color();
-
-    color middle;
-    for (int c = 0; c < 4; ++c)
-        middle.data[c] = 0.1 * green.data[c] + 0.9 * brown.data[c];
 
     for (int x = 0; x < world_size; ++x)
         for (int z = 0; z < world_size; ++z)
         {
-            hue = 0.0;
-            brightness = 0.4;
             for (int y = -5; y < height[x][z]; ++y)
                 add_cube(x, y, z);
             if (height[x][z] >= 0)
             {
                 add_cube(x, height[x][z], z);
                 for (int ci = 0; ci < 4; ++ci)
-                    cubes.back().planes[2].c[ci] = green;
+                {
+                    cubes.back().planes[2].hue = 1.5;
+                    cubes.back().planes[2].brightness = 0.7;
+                }
                 /*
                 cubes.back().planes[0].c[1] = middle;
                 cubes.back().planes[0].c[2] = middle;
@@ -81,6 +74,9 @@ main_window::main_window(QGLWidget *parent)
 
     brightness = 1.0 + 0.5 / sphere_y;
     hue = -3.0 / sphere_x;
+
+    sphere_hue = hue;
+    sphere_brightness = brightness;
 
     pl.x = world_size * 0.5;
     pl.z = world_size * 0.5;
@@ -214,7 +210,7 @@ double main_window::discrete_hue ( ) const
 
 void main_window::add_cube (int x, int y, int z)
 {
-    cubes.push_back(colored_cube(cube_position(x, y, z), get_current_color()));
+    cubes.push_back(colored_cube(cube_position(x, y, z), discrete_hue(), discrete_brightness()));
     cube_positions.insert(cube_position(x, y, z));
 }
 
@@ -275,10 +271,14 @@ void main_window::paintGL ( )
                 vertices.push_back(cubes[c].planes[p].coords[v]);
             for (int v = 0; v < 8; ++v)
                 tex_coords.push_back(plane::tex_coords[v]);
+
+            color col = get_color(cubes[c].planes[p].brightness, cubes[c].planes[p].hue);
             for (int v = 0; v < 4; ++v)
             {
                 for (int ci = 0; ci < 4; ++ci)
-                    colors.push_back(cubes[c].planes[p].c[v].data[ci]);
+                {
+                    colors.push_back(col.data[ci]);
+                }
             }
         }
     }
@@ -410,7 +410,7 @@ void main_window::paintGL ( )
         glTranslated(0.0, -4.0, -5.0);
     }
     glPushMatrix();
-    glRotated((brightness - 1.0) * 90, 1.0, 0.0, 0.0);
+    glRotated((sphere_brightness - 1.0) * 90, 1.0, 0.0, 0.0);
 
     for (int x = 0; x < sphere_x; ++x)
     {
@@ -418,7 +418,7 @@ void main_window::paintGL ( )
         {
             double dx = 2.0 * 3.1415926535 / sphere_x;
             double dy = 0.5 * 3.1415926535 / sphere_y;
-            double ax = (x - hue * sphere_x / 6.0 + sphere_x * 0.25) * dx;
+            double ax = (x - sphere_hue * sphere_x / 6.0 + sphere_x * 0.25) * dx;
             double ay = (y) * dy;
             glBegin(GL_QUADS);
                 set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
@@ -483,6 +483,9 @@ void main_window::mouseMoveEvent (QMouseEvent * mouseEvent)
         if (brightness > 2.0) brightness = 2.0;
         if (brightness < 0.0) brightness = 0.0;
         hue -= (mouseEvent->x() - width / 2) * 0.0075;
+
+        sphere_hue = hue;
+        sphere_brightness = brightness;
     }
     else
     {
@@ -606,8 +609,16 @@ void main_window::keyReleaseEvent (QKeyEvent * keyEvent)
     {
         if (has_chosen_plane)
         {
-            for (int c = 0; c < 4; ++c)
-                cubes[chosen_cube_index].planes[chosen_plane_index].c[c] = get_current_color();
+            cubes[chosen_cube_index].planes[chosen_plane_index].brightness = discrete_brightness();
+            cubes[chosen_cube_index].planes[chosen_plane_index].hue = discrete_hue();
+        }
+    }
+    else if (keyEvent->key() == Qt::Key_E)
+    {
+        if (has_chosen_plane)
+        {
+            brightness = cubes[chosen_cube_index].planes[chosen_plane_index].brightness + 0.5 / sphere_y;
+            hue = cubes[chosen_cube_index].planes[chosen_plane_index].hue - 3.0 / sphere_x;
         }
     }
 }
@@ -660,6 +671,11 @@ void main_window::timerEvent (QTimerEvent *)
     on_surface = false;
     for (const cube & c : cubes)
         on_surface |= pl.collide(c);
+
+    double sphere_k = 0.2;
+    sphere_hue += sphere_k * (hue - sphere_hue);
+    sphere_brightness += sphere_k * (brightness - sphere_brightness);
+
     //updateGL();
     paintGL();
 }

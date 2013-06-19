@@ -143,13 +143,13 @@ cube make_mesh (cube_position pos)
     return result;
 }
 
-cube colored_cube (cube_position pos, color c)
+cube colored_cube (cube_position pos, double hue, double brightness)
 {
     cube result = make_mesh(pos);
     for (int p = 0; p < 6; ++p)
     {
-        for (int ci = 0; ci < 4; ++ci)
-            result.planes[p].c[ci] = c;
+        result.planes[p].hue = hue;
+        result.planes[p].brightness = brightness;
     }
     return result;
 }

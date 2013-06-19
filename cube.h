@@ -31,7 +31,7 @@ struct plane
 {
     static const double tex_coords[8];
 
-    color c[4];
+    double hue, brightness;
 
     double coords[12];
 
@@ -47,6 +47,6 @@ struct cube
     plane planes[6];
 };
 
-cube colored_cube (cube_position, color);
+cube colored_cube (cube_position, double hue, double brightness);
 
 #endif // CUBE_H
