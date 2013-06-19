@@ -14,6 +14,8 @@ Middle mouse button - choose color on the color sphere
 
 Mouse wheel - switch between colors on the color sphere
 
+[Q] - paint selected plane with the chosen color
+
 [R] - return to start position
 
 [G] - turn on/off gravity

@@ -10,17 +10,6 @@ bool operator == (const plane & p1, const plane & p2)
         && p1.dx == p2.dx && p1.dy == p2.dy && p1.dz == p2.dz;
 }
 
-void plane::draw ( ) const
-{
-    glBegin(GL_QUADS);
-    for (int i = 0; i < 4; ++i)
-    {
-        glTexCoord2dv(tex_coords + i * 2);
-        glVertex3dv(coords + i * 3);
-    }
-    glEnd();
-}
-
 cube_position plane::adjacent_cube ( ) const
 {
     return cube_position(cx + dx, cy + dy, cz + dz);
@@ -159,13 +148,8 @@ cube colored_cube (cube_position pos, color c)
     cube result = make_mesh(pos);
     for (int p = 0; p < 6; ++p)
     {
-        result.planes[p].c = c;
+        for (int ci = 0; ci < 4; ++ci)
+            result.planes[p].c[ci] = c;
     }
     return result;
-}
-
-void cube::draw ( ) const
-{
-    for (int p = 0; p < 6; ++p)
-        planes[p].draw();
 }

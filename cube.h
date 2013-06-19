@@ -31,11 +31,9 @@ struct plane
 {
     static const double tex_coords[8];
 
-    color c;
+    color c[4];
 
     double coords[12];
-
-    void draw ( ) const;
 
     int cx, cy, cz, dx, dy, dz;
     cube_position adjacent_cube ( ) const;
@@ -46,8 +44,6 @@ bool operator == (const plane & p1, const plane & p2);
 struct cube
     : cube_position
 {
-    void draw ( ) const;
-
     plane planes[6];
 };
 

@@ -43,6 +43,17 @@ main_window::main_window(QGLWidget *parent)
                 }
     }
 
+    hue = 1.0;
+    brightness = 0.7;
+    color green = get_current_color();
+    hue = 0.0;
+    brightness = 0.4;
+    color brown = get_current_color();
+
+    color middle;
+    for (int c = 0; c < 4; ++c)
+        middle.data[c] = 0.1 * green.data[c] + 0.9 * brown.data[c];
+
     for (int x = 0; x < world_size; ++x)
         for (int z = 0; z < world_size; ++z)
         {
@@ -53,9 +64,18 @@ main_window::main_window(QGLWidget *parent)
             if (height[x][z] >= 0)
             {
                 add_cube(x, height[x][z], z);
-                hue = 1.0;
-                brightness = 0.7;
-                cubes.back().planes[2].c = get_current_color();
+                for (int ci = 0; ci < 4; ++ci)
+                    cubes.back().planes[2].c[ci] = green;
+                /*
+                cubes.back().planes[0].c[1] = middle;
+                cubes.back().planes[0].c[2] = middle;
+                cubes.back().planes[1].c[1] = middle;
+                cubes.back().planes[1].c[2] = middle;
+                cubes.back().planes[4].c[2] = middle;
+                cubes.back().planes[4].c[3] = middle;
+                cubes.back().planes[5].c[0] = middle;
+                cubes.back().planes[5].c[1] = middle;
+                */
             }
         }
 
@@ -258,7 +278,7 @@ void main_window::paintGL ( )
             for (int v = 0; v < 4; ++v)
             {
                 for (int ci = 0; ci < 4; ++ci)
-                    colors.push_back(cubes[c].planes[p].c.data[ci]);
+                    colors.push_back(cubes[c].planes[p].c[v].data[ci]);
             }
         }
     }
@@ -301,7 +321,7 @@ void main_window::paintGL ( )
     hits = glRenderMode(GL_RENDER);
     if (hits > 0)
     {
-        qDebug("%i", hits);
+        //qDebug("%i", hits);
 
         int min = 0;
 
@@ -581,6 +601,14 @@ void main_window::keyReleaseEvent (QKeyEvent * keyEvent)
     {
         pl.move_upward = 0;
         keyEvent->accept();
+    }
+    else if (keyEvent->key() == Qt::Key_Q)
+    {
+        if (has_chosen_plane)
+        {
+            for (int c = 0; c < 4; ++c)
+                cubes[chosen_cube_index].planes[chosen_plane_index].c[c] = get_current_color();
+        }
     }
 }
 
