@@ -10,6 +10,7 @@
 #include <vector>
 #include <chrono>
 #include <queue>
+#include <set>
 
 class main_window : public QGLWidget
 {
@@ -28,7 +29,9 @@ class main_window : public QGLWidget
 
     std::vector<cube> cubes;
 
-    static const int texture_size = 64;
+    std::set<cube_position> cube_positions;
+
+    static const int texture_size = 32;
     unsigned char texture[3 * texture_size * texture_size];
     unsigned int texture_id;
 
@@ -38,6 +41,8 @@ class main_window : public QGLWidget
 
     bool enable_gravity;
     const double g = 7;
+
+    const double jump = 1.5;
 
     bool on_surface;
 
@@ -55,8 +60,12 @@ class main_window : public QGLWidget
     color get_current_color ( ) const;
     void set_color (color c) const;
 
+    void add_cube (int x, int y, int z);
+
     const int sphere_x = 12;
     const int sphere_y = 4;
+
+    const int world_size = 50;
 
     bool rainbow;
     

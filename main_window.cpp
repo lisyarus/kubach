@@ -20,43 +20,64 @@ main_window::main_window(QGLWidget *parent)
 
     setFixedSize(800, 600);
 
-    brightness = 2.0;
+    brightness = 0.7;
+    hue = 1.0;
+
+    auto randomc = std::bind(std::uniform_int_distribution<int>(0, world_size - 1), std::default_random_engine());
+    auto randomh = std::bind(std::uniform_int_distribution<int>(-3, 3), std::default_random_engine());
+
+    std::vector<std::vector<int> > height(world_size, std::vector<int>(world_size, 5));
+
+    for (int iter = 0; iter < world_size * world_size / 10; ++iter)
+    {
+        int x = randomc();
+        int z = randomc();
+        int h = randomh();
+        if (h == 0) continue;
+
+        int ah = (h > 0) ? h : -h;
+        int th = (h > 0) ? 1 : -1;
+
+        for (int dx = -ah; dx <= ah; ++dx)
+            for (int dz = -ah; dz <= ah; ++dz)
+                if (x + dx >= 0 && x + dx < world_size && z + dz >= 0 && z + dz < world_size)
+                {
+                    height[x + dx][z + dz] += th * (ah - std::max(abs(dx), abs(dz)));
+                }
+    }
+
     hue = 0.0;
-
-    pl.y = 5.0;
-    pl.vy = 1.5;
-    pl.init();
-
-    for (int x = -10; x <= 10; ++x)
-        for (int z = -10; z <= 10; ++z)
-            cubes.emplace_back(x, 0, z, get_current_color());
-
-    for (int x = -10; x <= 10; ++x)
-        for (int y = 1; y <= 10; ++y)
+    brightness = 0.4;
+    for (int x = 0; x < world_size; ++x)
+        for (int z = 0; z < world_size; ++z)
         {
-            cubes.emplace_back(x, y, -10, get_current_color());
-            cubes.emplace_back(x, y, 10, get_current_color());
-        }
-
-    for (int z = -9; z <= 9; ++z)
-        for (int y = 1; y <= 10; ++y)
-        {
-            cubes.emplace_back(-10, y, z, get_current_color());
-            cubes.emplace_back(10, y, z, get_current_color());
+            for (int y = -5; y < height[x][z]; ++y)
+                add_cube(x, y, z);
+            if (height[x][z] >= 0)
+            {
+                add_cube(x, height[x][z], z);
+                cubes.back().planes[2].c = get_color(0.7, 1.5);
+            }
         }
 
     brightness = 1.0 + 0.5 / sphere_y;
     hue = -3.0 / sphere_x;
 
+    pl.x = world_size * 0.5;
+    pl.z = world_size * 0.5;
+    pl.y = 5.0;
+    pl.vy = 0.0;
+    pl.init();
+
     has_chosen_plane = false;
 
-    enable_gravity = true;
+    enable_gravity = false;
     on_surface = false;
 
     rainbow = false;
 
     last_frame = 0.0;
-    startTimer(20);
+    startTimer(10);
 }
 
 main_window::~main_window()
@@ -64,26 +85,27 @@ main_window::~main_window()
 
 void main_window::initializeGL ( )
 {
-    glClearColor(1.0, 1.0, 1.0, 1.0);
+    glClearColor(0.7, 0.8, 1.0, 1.0);
     glDepthFunc(GL_LEQUAL);
 
     glGenTextures(1, &texture_id);
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    auto random = std::bind(std::uniform_int_distribution<unsigned char>(240, 255), std::default_random_engine());
+    auto random = std::bind(std::uniform_int_distribution<unsigned char>(192, 255), std::default_random_engine());
     for (int x = 0; x < texture_size; ++x)
     {
         for (int y = 0; y < texture_size; ++y)
         {
             unsigned char value = random();
             bool border = x == 0 || x == texture_size - 1 || y == 0 || y == texture_size - 1;
+            int border_value = 127;
 
-            texture[x * texture_size * 3 + y * 3 + 0] = border ? 0 : value;
-            texture[x * texture_size * 3 + y * 3 + 1] = border ? 0 : value;
-            texture[x * texture_size * 3 + y * 3 + 2] = border ? 0 : value;
+            texture[x * texture_size * 3 + y * 3 + 0] = border ? border_value : value;
+            texture[x * texture_size * 3 + y * 3 + 1] = border ? border_value : value;
+            texture[x * texture_size * 3 + y * 3 + 2] = border ? border_value : value;
         }
     }
 
@@ -138,13 +160,13 @@ color main_window::get_color (double brightness, double hue) const
         res.data[1] += (1.0 - res.data[1]) * brightness;
         res.data[2] += (1.0 - res.data[2]) * brightness;
     }
+    res.data[3] = 1.0;
     return res;
 }
 
 color main_window::get_current_color ( ) const
 {
     color res = get_color(discrete_brightness(), discrete_hue());
-    res.data[3] = 0.5;
     return res;
 }
 
@@ -171,11 +193,23 @@ double main_window::discrete_hue ( ) const
     return truncate(hue * sphere_x / 6.0, 1) / static_cast<double>(sphere_x) * 6.0;
 }
 
+void main_window::add_cube (int x, int y, int z)
+{
+    cubes.push_back(colored_cube(cube_position(x, y, z), get_current_color()));
+    cube_positions.insert(cube_position(x, y, z));
+}
+
 void main_window::paintGL ( )
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
+
+    /*glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);*/
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -195,20 +229,42 @@ void main_window::paintGL ( )
     tex_coords.reserve(cubes.size() * 6 * 8);
     colors.reserve(cubes.size() * 6 * 16);
 
+    std::vector<int> indices;
+    indices.reserve(cubes.size() * 6);
+
+    int count = 0;
     for (size_t c = 0; c < cubes.size(); ++c)
     {
         for (int p = 0; p < 6; ++p)
         {
+            double rx = pl._x - cubes[c].planes[p].cx - cubes[c].planes[p].dx * 0.5;
+            double ry = pl._y - cubes[c].planes[p].cy - cubes[c].planes[p].dy * 0.5;
+            double rz = pl._z - cubes[c].planes[p].cz - cubes[c].planes[p].dz * 0.5;
+
+            double r = rx * cubes[c].planes[p].dx + ry * cubes[c].planes[p].dy + rz * cubes[c].planes[p].dz;
+
+            if (r < 0) continue;
+
+            if (cube_positions.find(cube_position(cubes[c].planes[p].cx + cubes[c].planes[p].dx,
+                                                  cubes[c].planes[p].cy + cubes[c].planes[p].dy,
+                                                  cubes[c].planes[p].cz + cubes[c].planes[p].dz)) != cube_positions.end())
+                continue;
+
+            indices.push_back(c * 6 + p);
+
             for (int v = 0; v < 12; ++v)
                 vertices.push_back(cubes[c].planes[p].coords[v]);
             for (int v = 0; v < 8; ++v)
                 tex_coords.push_back(plane::tex_coords[v]);
             for (int v = 0; v < 4; ++v)
             {
-                colors[c * 6 * 16 + p * 16 + v * 4 + 0] = cubes[c].c.data[0];
-                colors[c * 6 * 16 + p * 16 + v * 4 + 1] = cubes[c].c.data[1];
-                colors[c * 6 * 16 + p * 16 + v * 4 + 2] = cubes[c].c.data[2];
-                colors[c * 6 * 16 + p * 16 + v * 4 + 3] = cubes[c].c.data[3];
+                for (int ci = 0; ci < 4; ++ci)
+                    colors.push_back(cubes[c].planes[p].c.data[ci]);
+                if (chosen_cube_index == c && chosen_plane_index == p)
+                {
+                    for (int i = colors.size() - 4; i < colors.size(); ++i)
+                        colors[i] += (1.0 - colors[i]) * 0.5;
+                }
             }
         }
     }
@@ -220,11 +276,11 @@ void main_window::paintGL ( )
     glVertexPointer(3, GL_DOUBLE, 0, vertices.data());
     glTexCoordPointer(2, GL_DOUBLE, 0, tex_coords.data());
     glColorPointer(4, GL_DOUBLE, 0, colors.data());
-    glDrawArrays(GL_QUADS, 0, cubes.size() * 6 * 4);
+    glDrawArrays(GL_QUADS, 0, indices.size() * 4);
 
 
     unsigned int buffer[512];
-    unsigned int hits;
+    int hits;
     glSelectBuffer(512, buffer);
     glRenderMode(GL_SELECT);
     glInitNames();
@@ -242,13 +298,10 @@ void main_window::paintGL ( )
 
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    for (size_t c = 0; c < cubes.size(); ++c)
+    for (int i = 0; i < indices.size(); ++i)
     {
-        for (int p = 0; p < 6; ++p)
-        {
-            glLoadName(c * 6 + p);
-            glDrawArrays(GL_QUADS, (c * 6 + p) * 4, 4);
-        }
+        glLoadName(indices[i]);
+        glDrawArrays(GL_QUADS, i * 4, 4);
     }
 
     glMatrixMode(GL_PROJECTION);
@@ -258,6 +311,8 @@ void main_window::paintGL ( )
     hits = glRenderMode(GL_RENDER);
     if (hits > 0)
     {
+        qDebug("%i", hits);
+
         int min = 0;
 
         for (size_t i = 0; i < hits; ++i)
@@ -384,8 +439,7 @@ void main_window::paintGL ( )
         frames.pop();
 
         std::ostringstream oss;
-        oss << "Kubach. Try mouse buttons! FPS: ";
-        oss << (int)fps;
+        oss << "Kubach. Try mouse buttons! FPS: " << (int)fps;
         setWindowTitle(oss.str().c_str());
     }
 }
@@ -449,7 +503,10 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
             pl.move_upward = 1;
         else
             if (on_surface)
-                pl.vy = 1.5;
+            {
+                pl.y += 0.5;
+                pl.vy = jump;
+            }
         keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_Shift)
@@ -475,15 +532,14 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
                 break;
             }
         if (!found)
-            cubes.emplace_back(0, 0, 0, get_current_color());
+            add_cube(0, 0, 0);
         keyEvent->accept();
     }
     else if (keyEvent->key() == Qt::Key_R)
     {
-        pl.x = 0.0;
+        pl.x = world_size * 0.5;
         pl.y = 5.0;
-        pl.z = 0.0;
-        pl.vy = 1.5;
+        pl.z = world_size * 0.5;
         pl.init();
     }
 }
@@ -528,15 +584,18 @@ void main_window::mousePressEvent (QMouseEvent * mouseEvent)
     {
         if (has_chosen_plane)
         {
-            cube to_add = cubes[chosen_cube_index].planes[chosen_plane_index].adjacent_cube(get_current_color());
+            cube_position to_add = cubes[chosen_cube_index].planes[chosen_plane_index].adjacent_cube();
             if (!pl.has_collision(to_add))
-                cubes.push_back(to_add);
+            {
+                add_cube(to_add.x, to_add.y, to_add.z);
+            }
         }
     }
     else if (mouseEvent->button() == Qt::MouseButton::LeftButton)
     {
         if (has_chosen_plane)
         {
+            cube_positions.erase(cubes[chosen_cube_index]);
             cubes.erase(cubes.begin() + chosen_cube_index);
         }
     }

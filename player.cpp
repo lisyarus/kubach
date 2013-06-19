@@ -38,7 +38,7 @@ void player::move (double step)
     _z += (z - _z) * step * smooth;
 }
 
-bool player::has_collision (const cube & c) const
+bool player::has_collision (const cube_position & c) const
 {
     double tx = _x - c.x;
     double ty = _y - c.y;

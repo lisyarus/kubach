@@ -28,7 +28,7 @@ struct player
     void transform ( ) const;
 
     double distance (const cube & c) const;
-    bool has_collision (const cube & c) const;
+    bool has_collision (const cube_position & c) const;
     bool collide (const cube & c);
 
     void init ( )
@@ -38,7 +38,6 @@ struct player
         _z = z;
     }
 
-private:
     double _x, _y, _z;
 };
 
