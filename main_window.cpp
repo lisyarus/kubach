@@ -407,7 +407,7 @@ void main_window::paintGL ( )
     else
     {
         glScaled(0.2, 0.2, 0.2);
-        glTranslated(0.0, -4.0, -5.0);
+        glTranslated(-5.0, -4.0, -5.0);
     }
     glPushMatrix();
     glRotated((sphere_brightness - 1.0) * 90, 1.0, 0.0, 0.0);
