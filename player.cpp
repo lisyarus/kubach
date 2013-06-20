@@ -5,7 +5,7 @@
 
 const double player::size_x = 0.4;
 const double player::size_y_top = 0.2;
-const double player::size_y_bottom = 1.2;
+const double player::size_y_bottom = 1.6;
 const double player::size_z = 0.4;
 
 void player::move (double step)
