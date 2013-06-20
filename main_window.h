@@ -70,6 +70,8 @@ class main_window : public QGLWidget
     const int world_size = 50;
 
     bool rainbow;
+
+    double health;
     
 public:
     main_window(QGLWidget *parent = 0);

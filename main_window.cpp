@@ -91,6 +91,8 @@ main_window::main_window(QGLWidget *parent)
 
     rainbow = false;
 
+    health = 1.0;
+
     last_frame = 0.0;
     startTimer(10);
 }
@@ -451,6 +453,14 @@ void main_window::paintGL ( )
         glEnd();
     }
 
+    glColor4d(1.0, 0.0, 0.0, 1.0 - health);
+    glBegin(GL_QUADS);
+        glVertex3d(-100, -100, 10);
+        glVertex3d(-100, 100, 10);
+        glVertex3d(100, 100, 10);
+        glVertex3d(100, -100, 10);
+    glEnd();
+
     swapBuffers();
 
     auto now = std::chrono::high_resolution_clock::now();
@@ -668,13 +678,26 @@ void main_window::timerEvent (QTimerEvent *)
     if (enable_gravity)
         pl.vy -= g * last_frame;
     pl.move(speed * last_frame);
+
+    bool old_on_surface = on_surface;
+    double old_vy = pl.vy;
+
     on_surface = false;
     for (const cube & c : cubes)
         on_surface |= pl.collide(c);
 
+    if (!old_on_surface && on_surface)
+    {
+        if (old_vy < -3.0)
+            health = exp((old_vy + 3.0) * 0.4);
+    }
+
     double sphere_k = 0.2;
     sphere_hue += sphere_k * (hue - sphere_hue);
     sphere_brightness += sphere_k * (brightness - sphere_brightness);
+
+    health += 0.01;
+    if (health > 1.0) health = 1.0;
 
     //updateGL();
     paintGL();
