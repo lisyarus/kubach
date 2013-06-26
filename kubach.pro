@@ -7,7 +7,7 @@ TARGET = kubach
 DEPENDPATH += .
 INCLUDEPATH += .
 
-QMAKE_CXXFLAGS += -std=c++0x
+QMAKE_CXXFLAGS += -std=c++0x -O3 -DGL_GLEXT_PROTOTYPES
 QT += core gui opengl
 LIBS += -lGLU
 

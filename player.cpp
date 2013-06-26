@@ -40,9 +40,12 @@ void player::move (double step)
 
 bool player::has_collision (const cube_position & c) const
 {
+    auto sqr = [](double x){ return x * x; };
     double tx = _x - c.x;
     double ty = _y - c.y;
     double tz = _z - c.z;
+
+    if (sqr(tx) + sqr(ty) + sqr(tz) > 16.0) return false;
 
     double dx = fabs(tx);
     double dy = fabs(ty);

@@ -8,8 +8,14 @@
 #include <random>
 #include <functional>
 #include <sstream>
+#include <iostream>
 
+#include <GL/gl.h>
 #include <GL/glu.h>
+
+#define GL_GLEXT_PROTOTYPES 1
+#include <GL/glext.h>
+
 #include <cmath>
 
 main_window::main_window(QGLWidget *parent)
@@ -23,7 +29,12 @@ main_window::main_window(QGLWidget *parent)
     auto randomc = std::bind(std::uniform_int_distribution<int>(0, world_size - 1), std::default_random_engine());
     auto randomh = std::bind(std::uniform_int_distribution<int>(-3, 3), std::default_random_engine());
 
-    std::vector<std::vector<int> > height(world_size, std::vector<int>(world_size, 5));
+
+    randomf = std::bind(std::uniform_real_distribution<double>(0.0, 1.0), std::default_random_engine());
+
+    int start = (-1) << 0;
+
+    std::vector<std::vector<int> > height(world_size, std::vector<int>(world_size, start + 5));
 
     for (int iter = 0; iter < world_size * world_size / 10; ++iter)
     {
@@ -49,26 +60,14 @@ main_window::main_window(QGLWidget *parent)
     for (int x = 0; x < world_size; ++x)
         for (int z = 0; z < world_size; ++z)
         {
-            for (int y = -5; y < height[x][z]; ++y)
+            for (int y = start; y < height[x][z]; ++y)
                 add_cube(x, y, z);
-            if (height[x][z] >= 0)
+
+            add_cube(x, height[x][z], z);
+            for (int ci = 0; ci < 4; ++ci)
             {
-                add_cube(x, height[x][z], z);
-                for (int ci = 0; ci < 4; ++ci)
-                {
-                    cubes.back().planes[2].hue = 1.5;
-                    cubes.back().planes[2].brightness = 0.7;
-                }
-                /*
-                cubes.back().planes[0].c[1] = middle;
-                cubes.back().planes[0].c[2] = middle;
-                cubes.back().planes[1].c[1] = middle;
-                cubes.back().planes[1].c[2] = middle;
-                cubes.back().planes[4].c[2] = middle;
-                cubes.back().planes[4].c[3] = middle;
-                cubes.back().planes[5].c[0] = middle;
-                cubes.back().planes[5].c[1] = middle;
-                */
+                cubes.back().planes[2].hue = 1.5;
+                cubes.back().planes[2].brightness = 0.7;
             }
         }
 
@@ -80,13 +79,13 @@ main_window::main_window(QGLWidget *parent)
 
     pl.x = world_size * 0.5;
     pl.z = world_size * 0.5;
-    pl.y = 5.0;
+    pl.y = start + 100.0;
     pl.vy = 0.0;
     pl.init();
 
     has_chosen_plane = false;
 
-    enable_gravity = true;
+    enable_gravity = false;
     on_surface = false;
 
     rainbow = false;
@@ -102,10 +101,11 @@ main_window::~main_window()
 
 void main_window::initializeGL ( )
 {
-    glClearColor(0.7, 0.8, 1.0, 1.0);
     glDepthFunc(GL_LEQUAL);
 
     glGenTextures(1, &texture_id);
+
+    glActiveTexture(GL_TEXTURE0);
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
     glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
@@ -128,6 +128,46 @@ void main_window::initializeGL ( )
 
     glBindTexture(GL_TEXTURE_2D, texture_id);
     glTexImage2D(GL_TEXTURE_2D, 0, 3, texture_size, texture_size, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
+
+    const char * vertex_shader_code = "\
+    uniform float health; \
+    attribute vec4 relocate; \
+    void main() { \
+        gl_Position = gl_ModelViewProjectionMatrix * (gl_Vertex + relocate); \
+        gl_FrontColor = gl_Color * (1.0 - health); \
+        gl_FrontColor[0] = gl_Color[0] + health * (1.0 - gl_Color[0]); \
+        gl_FrontColor[3] = gl_Color[3]; \
+        gl_BackColor = gl_Color; \
+         \
+    }";
+    const char * fragment_shader_code = "\
+    uniform sampler2D texture1; \
+    void main() { \
+        gl_FragColor = gl_Color; \
+    }";
+    unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    unsigned int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+
+    glShaderSource(vertex_shader, 1, &vertex_shader_code, 0);
+    glShaderSource(fragment_shader, 1, &fragment_shader_code, 0);
+
+    glCompileShader(vertex_shader);
+    glCompileShader(fragment_shader);
+
+    unsigned int program = glCreateProgram();
+    glAttachShader(program, vertex_shader);
+    glAttachShader(program, fragment_shader);
+
+    glLinkProgram(program);
+
+    glUseProgram(program);
+
+    int location = glGetUniformLocation(program, "texture1");
+    glUniform1i(location, 0);
+
+    uniform_satan = glGetUniformLocation(program, "health");
+    relocate_addr = glGetAttribLocation(program, "relocate");
+    std::cerr << relocate_addr;
 }
 
 void main_window::resizeGL (int width, int height)
@@ -218,6 +258,8 @@ void main_window::add_cube (int x, int y, int z)
 
 void main_window::paintGL ( )
 {
+    float dispersion = 1.0 - health;
+    glClearColor(0.7 + 0.3 * dispersion, 0.8 * health, 1.0 * health, 1.0 * health);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
@@ -231,6 +273,7 @@ void main_window::paintGL ( )
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     glFrustum(- ratio * 0.01, ratio * 0.01, -0.01, 0.01, 0.01, 1000.0);
+    //glOrtho(-10.0, 10.0, -10.0, 10.0, -100.0, 100.0);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -242,12 +285,23 @@ void main_window::paintGL ( )
     std::vector<double> vertices;
     std::vector<double> tex_coords;
     std::vector<double> colors;
+    std::vector<double> relocations;
     vertices.reserve(cubes.size() * 6 * 12);
     tex_coords.reserve(cubes.size() * 6 * 8);
     colors.reserve(cubes.size() * 6 * 16);
+    relocations.reserve(cubes.size() * 6 * 16);
 
     std::vector<int> indices;
     indices.reserve(cubes.size() * 6);
+
+    glUniform1f(uniform_satan, dispersion);
+    const float q = 0.07;
+    { float health = 0.0;
+    float v3[3] = {
+        randomf() * (1.0 - health) * q,
+        randomf() * (1.0 - health) * q,
+        randomf() * (1.0 - health) * q
+    };
 
     int count = 0;
     for (size_t c = 0; c < cubes.size(); ++c)
@@ -268,9 +322,27 @@ void main_window::paintGL ( )
                 continue;
 
             indices.push_back(c * 6 + p);
+            float z = randomf() * q * std::sin(this->pl.vy);
+            for (int v = 0; v < 4; ++v)
+            {
+                vertices.push_back(cubes[c].planes[p].coords[3 * v + 0]);
+                vertices.push_back(cubes[c].planes[p].coords[3 * v + 1]);
+                vertices.push_back(cubes[c].planes[p].coords[3 * v + 2]);
 
-            for (int v = 0; v < 12; ++v)
-                vertices.push_back(cubes[c].planes[p].coords[v]);
+                if (health < 0.999f) {
+                    relocations.push_back(z);
+                    relocations.push_back(z);
+                    relocations.push_back(0.0f);
+                    relocations.push_back(0.0f);
+                } else {
+                    relocations.push_back(0.0f);
+                    relocations.push_back(0.0f);
+                    relocations.push_back(0.0f);
+                    relocations.push_back(0.0f);
+                }
+            }
+            
+
             for (int v = 0; v < 8; ++v)
                 tex_coords.push_back(plane::tex_coords[v]);
 
@@ -283,17 +355,19 @@ void main_window::paintGL ( )
                 }
             }
         }
-    }
+    }}
 
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
+    glEnableVertexAttribArray(relocate_addr);
 
     glVertexPointer(3, GL_DOUBLE, 0, vertices.data());
     glTexCoordPointer(2, GL_DOUBLE, 0, tex_coords.data());
     glColorPointer(4, GL_DOUBLE, 0, colors.data());
+    glVertexAttribPointer(relocate_addr, 4, GL_DOUBLE, GL_FALSE, 0, relocations.data());
 
-    unsigned int buffer[512];
+    /*unsigned int buffer[512];
     int hits;
     glSelectBuffer(512, buffer);
     glRenderMode(GL_SELECT);
@@ -312,8 +386,13 @@ void main_window::paintGL ( )
 
     for (int i = 0; i < indices.size(); ++i)
     {
-        glLoadName(indices[i]);
-        glDrawArrays(GL_QUADS, i * 4, 4);
+        auto sqr = [](double x){ return x * x; };
+        int cube_index = indices[i] / 6;
+        if (sqr(pl.x - cubes[cube_index].x) + sqr(pl.y - cubes[cube_index].y) + sqr(pl.z - cubes[cube_index].z) < 25)
+        {
+            glLoadName(indices[i]);
+            glDrawArrays(GL_QUADS, i * 4, 4);
+        }
     }
 
     glMatrixMode(GL_PROJECTION);
@@ -365,7 +444,7 @@ void main_window::paintGL ( )
                 colors[16 * i + v * 4 + 2] += 0.2;
             }
         }
-    }
+    }*/
 
     glDrawArrays(GL_QUADS, 0, indices.size() * 4);
 
@@ -453,13 +532,13 @@ void main_window::paintGL ( )
         glEnd();
     }
 
-    glColor4d(1.0, 0.0, 0.0, 1.0 - health);
+    /*glColor4d(1.0, 0.0, 0.0, 1.0 - health);
     glBegin(GL_QUADS);
         glVertex3d(-100, -100, 10);
         glVertex3d(-100, 100, 10);
         glVertex3d(100, 100, 10);
         glVertex3d(100, -100, 10);
-    glEnd();
+    glEnd();*/
 
     swapBuffers();
 

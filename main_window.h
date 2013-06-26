@@ -67,11 +67,15 @@ class main_window : public QGLWidget
     const int sphere_x = 12;
     const int sphere_y = 4;
 
-    const int world_size = 50;
+    const int world_size = 70;
 
     bool rainbow;
 
     double health;
+    int uniform_satan;
+    int relocate_addr;
+
+    std::function<float()> randomf;
     
 public:
     main_window(QGLWidget *parent = 0);
