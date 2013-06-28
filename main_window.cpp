@@ -131,7 +131,7 @@ void main_window::initializeGL ( )
 
     const char * vertex_shader_code = "\
     uniform float health; \
-    attribute vec4 relocate; \
+    uniform vec4 relocate; \
     void main() { \
         gl_Position = gl_ModelViewProjectionMatrix * (gl_Vertex + relocate); \
         gl_FrontColor = gl_Color * (1.0 - health); \
@@ -162,12 +162,9 @@ void main_window::initializeGL ( )
 
     glUseProgram(program);
 
-    int location = glGetUniformLocation(program, "texture1");
-    glUniform1i(location, 0);
-
     uniform_satan = glGetUniformLocation(program, "health");
-    relocate_addr = glGetAttribLocation(program, "relocate");
-    std::cerr << relocate_addr;
+    relocate_addr = glGetUniformLocation(program, "relocate");
+    std::cerr << "Health: " << uniform_satan << "\nRelocate: " << relocate_addr << '\n';
 }
 
 void main_window::resizeGL (int width, int height)
@@ -295,6 +292,10 @@ void main_window::paintGL ( )
     indices.reserve(cubes.size() * 6);
 
     glUniform1f(uniform_satan, dispersion);
+    double h = health;
+    std::function<double()> r = randomf;
+    auto random_earthquake = [h, r](){ return 0.1 * (1.0 - h) * (2.0 * r() - 1.0); };
+    glUniform4f(relocate_addr, random_earthquake(), random_earthquake(), random_earthquake(), 0.0);
     const float q = 0.07;
     { float health = 0.0;
     float v3[3] = {
@@ -360,12 +361,11 @@ void main_window::paintGL ( )
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
-    glEnableVertexAttribArray(relocate_addr);
 
     glVertexPointer(3, GL_DOUBLE, 0, vertices.data());
     glTexCoordPointer(2, GL_DOUBLE, 0, tex_coords.data());
     glColorPointer(4, GL_DOUBLE, 0, colors.data());
-    glVertexAttribPointer(relocate_addr, 4, GL_DOUBLE, GL_FALSE, 0, relocations.data());
+    //glVertexAttribPointer(relocate_addr, 4, GL_DOUBLE, GL_FALSE, 0, relocations.data());
 
     /*unsigned int buffer[512];
     int hits;
