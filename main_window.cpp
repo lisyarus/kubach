@@ -130,20 +130,29 @@ void main_window::initializeGL ( )
     glTexImage2D(GL_TEXTURE_2D, 0, 3, texture_size, texture_size, 0, GL_RGB, GL_UNSIGNED_BYTE, texture);
 
     const char * vertex_shader_code = "\
-    uniform float health; \
     uniform vec4 relocate; \
+    uniform vec4 playerPos; \
+    varying vec2 texCoord; \
     void main() { \
         gl_Position = gl_ModelViewProjectionMatrix * (gl_Vertex + relocate); \
-        gl_FrontColor = gl_Color * (1.0 - health); \
-        gl_FrontColor[0] = gl_Color[0] + health * (1.0 - gl_Color[0]); \
-        gl_FrontColor[3] = gl_Color[3]; \
+        gl_FrontColor = gl_Color; \
         gl_BackColor = gl_Color; \
-         \
+        texCoord = gl_MultiTexCoord0.xy; \
     }";
     const char * fragment_shader_code = "\
-    uniform sampler2D texture1; \
+    uniform float health; \
+    uniform sampler2D texture; \
+    varying vec2 texCoord; \
+    vec4 texColor; \
     void main() { \
-        gl_FragColor = gl_Color; \
+        texColor = texture2D(texture, texCoord); \
+        gl_FragColor[0] = texColor[0] * gl_Color[0]; \
+        gl_FragColor[1] = texColor[1] * gl_Color[1]; \
+        gl_FragColor[2] = texColor[2] * gl_Color[2]; \
+        gl_FragColor[3] = texColor[3] * gl_Color[3]; \
+        gl_FragColor[0] = gl_FragColor[0] + health * (1.0 - gl_FragColor[0]); \
+        gl_FragColor[1] = gl_FragColor[1] + health * (0.0 - gl_FragColor[1]); \
+        gl_FragColor[2] = gl_FragColor[2] + health * (0.0 - gl_FragColor[2]); \
     }";
     unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     unsigned int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -153,6 +162,12 @@ void main_window::initializeGL ( )
 
     glCompileShader(vertex_shader);
     glCompileShader(fragment_shader);
+
+    int shader_compiled;
+    glGetShaderiv(vertex_shader, GL_COMPILE_STATUS, &shader_compiled);
+    if (!shader_compiled) qDebug("Vertex shader failed to compile");
+    glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &shader_compiled);
+    if (!shader_compiled) qDebug("Fragment shader failed to compile");
 
     unsigned int program = glCreateProgram();
     glAttachShader(program, vertex_shader);
@@ -164,7 +179,8 @@ void main_window::initializeGL ( )
 
     uniform_satan = glGetUniformLocation(program, "health");
     relocate_addr = glGetUniformLocation(program, "relocate");
-    std::cerr << "Health: " << uniform_satan << "\nRelocate: " << relocate_addr << '\n';
+    playerpos_addr = glGetUniformLocation(program, "playerPos");
+    std::cerr << "Health: " << uniform_satan << "\nRelocate: " << relocate_addr << "\nPlayer pos: " << playerpos_addr << "\n";
 }
 
 void main_window::resizeGL (int width, int height)
@@ -296,6 +312,7 @@ void main_window::paintGL ( )
     std::function<double()> r = randomf;
     auto random_earthquake = [h, r](){ return 0.1 * (1.0 - h) * (2.0 * r() - 1.0); };
     glUniform4f(relocate_addr, random_earthquake(), random_earthquake(), random_earthquake(), 0.0);
+    glUniform4f(playerpos_addr, pl._x, pl._y, pl._z, 0.0);
     const float q = 0.07;
     { float health = 0.0;
     float v3[3] = {

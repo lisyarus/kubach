@@ -74,6 +74,7 @@ class main_window : public QGLWidget
     double health;
     int uniform_satan;
     int relocate_addr;
+    int playerpos_addr;
 
     std::function<float()> randomf;
     
