@@ -117,7 +117,7 @@ void main_window::initializeGL ( )
         for (int y = 0; y < texture_size; ++y)
         {
             unsigned char value = random();
-            bool border = x == 0 || x == texture_size - 1 || y == 0 || y == texture_size - 1;
+            bool border = false; //x == 0 || x == texture_size - 1 || y == 0 || y == texture_size - 1;
             int border_value = 127;
 
             texture[x * texture_size * 3 + y * 3 + 0] = border ? border_value : value;
@@ -153,6 +153,10 @@ void main_window::initializeGL ( )
         gl_FragColor[0] = gl_FragColor[0] + health * (1.0 - gl_FragColor[0]); \
         gl_FragColor[1] = gl_FragColor[1] + health * (0.0 - gl_FragColor[1]); \
         gl_FragColor[2] = gl_FragColor[2] + health * (0.0 - gl_FragColor[2]); \
+        if (texCoord[0] < 1.0 / 32.0 || texCoord[0] > 31.0 / 32.0 || texCoord[1] < 1.0 / 32.0 || texCoord[1] > 31.0 / 32.0) \
+        { \
+            gl_FragColor = mix(gl_FragColor, vec4(0.0, 0.0, 0.0, 1.0), 0.5); \
+        } \
     }";
     unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     unsigned int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
