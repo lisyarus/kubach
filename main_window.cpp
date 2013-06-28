@@ -71,6 +71,8 @@ main_window::main_window(QGLWidget *parent)
             }
         }
 
+    std::cout << cubes.size() << '\n';
+
     brightness = 1.0 + 0.5 / sphere_y;
     hue = -3.0 / sphere_x;
 
@@ -134,7 +136,9 @@ void main_window::initializeGL ( )
     varying vec2 texCoord; \
     varying vec4 position; \
     varying vec4 normal; \
+    uniform vec4 playerPos; \
     void main() { \
+        if (dot(gl_Vertex - playerPos, gl_Vertex - playerPos) < 0.0) { } \
         gl_Position = gl_ModelViewProjectionMatrix * (gl_Vertex + relocate); \
         position = gl_Vertex; \
         normal = vec4(gl_Normal, 0.0); \
@@ -168,7 +172,7 @@ void main_window::initializeGL ( )
         { \
             gl_FragColor = mix(gl_FragColor, vec4(0.0, 0.0, 0.0, 1.0), 0.5); \
         } \
-        gl_FragColor = mix(vec4(0.0, 0.0, 0.0, 1.0), gl_FragColor, min(light * 10.0 / dot(delta, delta), 1.0)); \
+        gl_FragColor = mix(vec4(0.75, 0.75, 0.75, 1.0), gl_FragColor, min(10.0 / dot(delta, delta), 1.0)); \
     }";
     unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     unsigned int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -289,7 +293,7 @@ void main_window::paintGL ( )
 {
     float dispersion = 1.0 - health;
     //glClearColor(0.7 + 0.3 * dispersion, 0.8 * health, 1.0 * health, 1.0 * health);
-    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glClearColor(0.75, 0.75, 0.75, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
@@ -471,7 +475,7 @@ void main_window::paintGL ( )
                 colors[16 * i + v * 4 + 2] += 0.2;
             }
         }
-    }*/
+    }//*/
 
     glDrawArrays(GL_QUADS, 0, indices.size() * 4);
 
@@ -498,74 +502,6 @@ void main_window::paintGL ( )
         glVertex2d(0.0, -cross_size);
         glVertex2d(0.0, cross_size);
     glEnd();
-
-    glClear(GL_DEPTH_BUFFER_BIT);
-    glEnable(GL_DEPTH_TEST);
-
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-ratio, ratio, -1.0, 1.0, -1.0, 10.0);
-    //glFrustum(- ratio * 0.01, ratio * 0.01, -0.01, 0.01, 0.01, 1000.0);
-
-    glMatrixMode(GL_MODELVIEW);
-    if (rainbow)
-    {
-        glScaled(0.8, 0.8, 0.8);
-    }
-    else
-    {
-        glScaled(0.2, 0.2, 0.2);
-        glTranslated(-5.0, -4.0, -5.0);
-    }
-    glPushMatrix();
-    glRotated((sphere_brightness - 1.0) * 90, 1.0, 0.0, 0.0);
-
-    for (int x = 0; x < sphere_x; ++x)
-    {
-        for (int y = -sphere_y; y < sphere_y; ++y)
-        {
-            double dx = 2.0 * 3.1415926535 / sphere_x;
-            double dy = 0.5 * 3.1415926535 / sphere_y;
-            double ax = (x - sphere_hue * sphere_x / 6.0 + sphere_x * 0.25) * dx;
-            double ay = (y) * dy;
-            glBegin(GL_QUADS);
-                set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
-                glVertex3d(cos(ax) * cos(ay), sin(ay), sin(ax) * cos(ay));
-                //set_color(get_color(1.0 + static_cast<double>(y) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
-                glVertex3d(cos(ax + dx) * cos(ay), sin(ay), sin(ax + dx) * cos(ay));
-                //set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x + 1) / sphere_x * 6.0));
-                glVertex3d(cos(ax + dx) * cos(ay + dy), sin(ay + dy), sin(ax + dx) * cos(ay + dy));
-                //set_color(get_color(1.0 + static_cast<double>(y + 1) / sphere_y, static_cast<double>(x) / sphere_x * 6.0));
-                glVertex3d(cos(ax) * cos(ay + dy), sin(ay + dy), sin(ax) * cos(ay + dy));
-            glEnd();
-        }
-    }
-    glPopMatrix();
-
-    if (rainbow)
-    {
-        glDisable(GL_DEPTH_TEST);
-        set_color(get_current_color());
-        glBegin(GL_TRIANGLES);
-            glVertex3d(-0.1, -0.05, 1.1);
-            glVertex3d(0.0, 0.0, 1.0);
-            glVertex3d(0.1, -0.05, 1.1);
-        glEnd();
-        glColor3f(0.0, 0.0, 0.0);
-        glBegin(GL_LINE_LOOP);
-            glVertex3d(-0.1, -0.05, 1.1);
-            glVertex3d(0.0, 0.0, 1.0);
-            glVertex3d(0.1, -0.05, 1.1);
-        glEnd();
-    }
-
-    /*glColor4d(1.0, 0.0, 0.0, 1.0 - health);
-    glBegin(GL_QUADS);
-        glVertex3d(-100, -100, 10);
-        glVertex3d(-100, 100, 10);
-        glVertex3d(100, 100, 10);
-        glVertex3d(100, -100, 10);
-    glEnd();*/
 
     swapBuffers();
 
