@@ -131,10 +131,13 @@ void main_window::initializeGL ( )
 
     const char * vertex_shader_code = "\
     uniform vec4 relocate; \
-    uniform vec4 playerPos; \
     varying vec2 texCoord; \
+    varying vec4 position; \
+    varying vec4 normal; \
     void main() { \
         gl_Position = gl_ModelViewProjectionMatrix * (gl_Vertex + relocate); \
+        position = gl_Vertex; \
+        normal = vec4(gl_Normal, 0.0); \
         gl_FrontColor = gl_Color; \
         gl_BackColor = gl_Color; \
         texCoord = gl_MultiTexCoord0.xy; \
@@ -144,7 +147,15 @@ void main_window::initializeGL ( )
     uniform sampler2D texture; \
     varying vec2 texCoord; \
     vec4 texColor; \
+    varying vec4 position; \
+    varying vec4 normal; \
+    uniform vec4 playerPos; \
+    vec4 delta; \
+    float light; \
     void main() { \
+        delta = playerPos - position; \
+        delta[3] = 0.0; \
+        light = dot(normalize(delta), normal); \
         texColor = texture2D(texture, texCoord); \
         gl_FragColor[0] = texColor[0] * gl_Color[0]; \
         gl_FragColor[1] = texColor[1] * gl_Color[1]; \
@@ -157,6 +168,7 @@ void main_window::initializeGL ( )
         { \
             gl_FragColor = mix(gl_FragColor, vec4(0.0, 0.0, 0.0, 1.0), 0.5); \
         } \
+        gl_FragColor = mix(vec4(0.0, 0.0, 0.0, 1.0), gl_FragColor, min(light * 10.0 / dot(delta, delta), 1.0)); \
     }";
     unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     unsigned int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -276,7 +288,8 @@ void main_window::add_cube (int x, int y, int z)
 void main_window::paintGL ( )
 {
     float dispersion = 1.0 - health;
-    glClearColor(0.7 + 0.3 * dispersion, 0.8 * health, 1.0 * health, 1.0 * health);
+    //glClearColor(0.7 + 0.3 * dispersion, 0.8 * health, 1.0 * health, 1.0 * health);
+    glClearColor(0.0, 0.0, 0.0, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
@@ -302,11 +315,11 @@ void main_window::paintGL ( )
     std::vector<double> vertices;
     std::vector<double> tex_coords;
     std::vector<double> colors;
-    std::vector<double> relocations;
+    std::vector<double> normals;
     vertices.reserve(cubes.size() * 6 * 12);
     tex_coords.reserve(cubes.size() * 6 * 8);
     colors.reserve(cubes.size() * 6 * 16);
-    relocations.reserve(cubes.size() * 6 * 16);
+    normals.reserve(cubes.size() * 6 * 12);
 
     std::vector<int> indices;
     indices.reserve(cubes.size() * 6);
@@ -350,18 +363,9 @@ void main_window::paintGL ( )
                 vertices.push_back(cubes[c].planes[p].coords[3 * v + 0]);
                 vertices.push_back(cubes[c].planes[p].coords[3 * v + 1]);
                 vertices.push_back(cubes[c].planes[p].coords[3 * v + 2]);
-
-                if (health < 0.999f) {
-                    relocations.push_back(z);
-                    relocations.push_back(z);
-                    relocations.push_back(0.0f);
-                    relocations.push_back(0.0f);
-                } else {
-                    relocations.push_back(0.0f);
-                    relocations.push_back(0.0f);
-                    relocations.push_back(0.0f);
-                    relocations.push_back(0.0f);
-                }
+                normals.push_back(cubes[c].planes[p].dx);
+                normals.push_back(cubes[c].planes[p].dy);
+                normals.push_back(cubes[c].planes[p].dz);
             }
             
 
@@ -382,10 +386,12 @@ void main_window::paintGL ( )
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
     glEnableClientState(GL_COLOR_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
 
     glVertexPointer(3, GL_DOUBLE, 0, vertices.data());
     glTexCoordPointer(2, GL_DOUBLE, 0, tex_coords.data());
     glColorPointer(4, GL_DOUBLE, 0, colors.data());
+    glNormalPointer(GL_DOUBLE, 0, normals.data());
     //glVertexAttribPointer(relocate_addr, 4, GL_DOUBLE, GL_FALSE, 0, relocations.data());
 
     /*unsigned int buffer[512];
