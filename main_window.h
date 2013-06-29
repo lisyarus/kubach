@@ -76,6 +76,10 @@ class main_window : public QGLWidget
     int relocate_addr;
     int playerpos_addr;
 
+    unsigned int program;
+
+    unsigned int simple_program;
+
     std::function<float()> randomf;
     
 public:

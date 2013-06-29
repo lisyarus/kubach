@@ -87,7 +87,7 @@ main_window::main_window(QGLWidget *parent)
 
     has_chosen_plane = false;
 
-    enable_gravity = false;
+    enable_gravity = true;
     on_surface = false;
 
     rainbow = false;
@@ -189,7 +189,7 @@ void main_window::initializeGL ( )
     glGetShaderiv(fragment_shader, GL_COMPILE_STATUS, &shader_compiled);
     if (!shader_compiled) qDebug("Fragment shader failed to compile");
 
-    unsigned int program = glCreateProgram();
+    program = glCreateProgram();
     glAttachShader(program, vertex_shader);
     glAttachShader(program, fragment_shader);
 
@@ -201,6 +201,41 @@ void main_window::initializeGL ( )
     relocate_addr = glGetUniformLocation(program, "relocate");
     playerpos_addr = glGetUniformLocation(program, "playerPos");
     std::cerr << "Health: " << uniform_satan << "\nRelocate: " << relocate_addr << "\nPlayer pos: " << playerpos_addr << "\n";
+
+    unsigned int simple_vertex_shader = glCreateShader(GL_VERTEX_SHADER);
+    unsigned int simple_fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
+
+    const char * simple_vertex_shader_code = " \
+    void main ( ) \
+    { \
+        gl_Position = gl_ModelViewProjectionMatrix * gl_Vertex; \
+        gl_FrontColor = gl_Color; \
+        gl_BackColor = gl_Color; \
+    }";
+
+    const char * simple_fragment_shader_code = " \
+    void main ( ) \
+    { \
+        gl_FragColor = gl_Color; \
+    }";
+
+    glShaderSource(simple_vertex_shader, 1, &simple_vertex_shader_code, 0);
+    glShaderSource(simple_fragment_shader, 1, &simple_fragment_shader_code, 0);
+
+    glCompileShader(simple_vertex_shader);
+    glCompileShader(simple_fragment_shader);
+
+    glGetShaderiv(simple_vertex_shader, GL_COMPILE_STATUS, &shader_compiled);
+    if (!shader_compiled) qDebug("Simple vertex shader failed to compile");
+    glGetShaderiv(simple_fragment_shader, GL_COMPILE_STATUS, &shader_compiled);
+    if (!shader_compiled) qDebug("Simple fragment shader failed to compile");
+
+    simple_program = glCreateProgram();
+    glAttachShader(simple_program, simple_vertex_shader);
+    glAttachShader(simple_program, simple_fragment_shader);
+
+    glLinkProgram(simple_program);
+
 }
 
 void main_window::resizeGL (int width, int height)
@@ -291,6 +326,8 @@ void main_window::add_cube (int x, int y, int z)
 
 void main_window::paintGL ( )
 {
+    glUseProgram(program);
+
     float dispersion = 1.0 - health;
     //glClearColor(0.7 + 0.3 * dispersion, 0.8 * health, 1.0 * health, 1.0 * health);
     glClearColor(0.75, 0.75, 0.75, 0.0);
@@ -495,7 +532,9 @@ void main_window::paintGL ( )
 
     glMatrixMode(GL_MODELVIEW);
 
-    set_color(get_color(2.0 - brightness, hue + 3.0));
+    glUseProgram(simple_program);
+
+    glColor3f(0.0, 0.0, 0.0);
     glBegin(GL_LINES);
         glVertex2d(-cross_size, 0.0);
         glVertex2d(cross_size, 0.0);
