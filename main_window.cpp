@@ -165,14 +165,14 @@ void main_window::initializeGL ( )
         gl_FragColor[1] = texColor[1] * gl_Color[1]; \
         gl_FragColor[2] = texColor[2] * gl_Color[2]; \
         gl_FragColor[3] = texColor[3] * gl_Color[3]; \
-        gl_FragColor[0] = gl_FragColor[0] + health * (1.0 - gl_FragColor[0]); \
-        gl_FragColor[1] = gl_FragColor[1] + health * (0.0 - gl_FragColor[1]); \
-        gl_FragColor[2] = gl_FragColor[2] + health * (0.0 - gl_FragColor[2]); \
         if (texCoord[0] < 1.0 / 32.0 || texCoord[0] > 31.0 / 32.0 || texCoord[1] < 1.0 / 32.0 || texCoord[1] > 31.0 / 32.0) \
         { \
             gl_FragColor = mix(gl_FragColor, vec4(0.0, 0.0, 0.0, 1.0), 0.5); \
         } \
         gl_FragColor = mix(vec4(0.75, 0.75, 0.75, 1.0), gl_FragColor, min(10.0 / dot(delta, delta), 1.0)); \
+        gl_FragColor[0] = gl_FragColor[0] + health * (1.0 - gl_FragColor[0]); \
+        gl_FragColor[1] = gl_FragColor[1] + health * (0.0 - gl_FragColor[1]); \
+        gl_FragColor[2] = gl_FragColor[2] + health * (0.0 - gl_FragColor[2]); \
     }";
     unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     unsigned int fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
@@ -329,8 +329,8 @@ void main_window::paintGL ( )
     glUseProgram(program);
 
     float dispersion = 1.0 - health;
-    //glClearColor(0.7 + 0.3 * dispersion, 0.8 * health, 1.0 * health, 1.0 * health);
-    glClearColor(0.75, 0.75, 0.75, 0.0);
+    glClearColor(0.75 + 0.25 * (1.0 - health), 0.75 * health, 0.75 * health, 1.0);
+    //glClearColor(0.75, 0.75, 0.75, 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
