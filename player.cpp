@@ -8,6 +8,12 @@ const double player::size_y_top = 0.2;
 const double player::size_y_bottom = 1.6;
 const double player::size_z = 0.4;
 
+void player::fake_move (double step)
+{
+    _x += step * move_sideward * cos(alpha);
+    _z += step * move_sideward * sin(alpha);
+}
+
 void player::move (double step)
 {
     double scale = step;
@@ -31,7 +37,10 @@ void player::move (double step)
 
     y += step * move_upward;
     y += vy * step;
+}
 
+void player::smooth (double step)
+{
     double smooth = 0.99;
     _x += (x - _x) * step * smooth;
     _y += (y - _y) * step * smooth;

@@ -22,10 +22,12 @@ struct player
         move_forward(0), move_sideward(0), move_upward(0)
     { }
 
+    void fake_move (double step);
     void move (double step);
     void translate ( ) const;
     void rotate ( ) const;
     void transform ( ) const;
+    void smooth (double step);
 
     double distance (const cube & c) const;
     bool has_collision (const cube_position & c) const;

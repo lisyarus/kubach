@@ -24,7 +24,7 @@ main_window::main_window(QGLWidget *parent)
     QApplication::setOverrideCursor(Qt::BlankCursor);
     setMouseTracking(true);
 
-    setFixedSize(800, 600);
+    setFixedSize(600, 200);
 
     auto randomc = std::bind(std::uniform_int_distribution<int>(0, world_size - 1), std::default_random_engine());
     auto randomh = std::bind(std::uniform_int_distribution<int>(-3, 3), std::default_random_engine());
@@ -81,7 +81,7 @@ main_window::main_window(QGLWidget *parent)
 
     pl.x = world_size * 0.5;
     pl.z = world_size * 0.5;
-    pl.y = start + 100.0;
+    pl.y = start + 10;
     pl.vy = 0.0;
     pl.init();
 
@@ -248,9 +248,7 @@ void main_window::resizeGL (int width, int height)
     pl.alpha = 0.0;
     pl.beta = 0.0;
 
-    ratio = static_cast<double>(width) / height;
-
-    glViewport(0, 0, width, height);
+    ratio = static_cast<double>(width) / (2 * height);
 }
 
 color main_window::get_color (double brightness, double hue) const
@@ -331,6 +329,8 @@ void main_window::paintGL ( )
     float dispersion = 1.0 - health;
     glClearColor(0.75 + 0.25 * (1.0 - health), 0.75 * health, 0.75 * health, 1.0);
     //glClearColor(0.75, 0.75, 0.75, 0.0);
+
+    glViewport(0, 0, width / 2, height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     glEnable(GL_DEPTH_TEST);
@@ -347,8 +347,6 @@ void main_window::paintGL ( )
     //glOrtho(-10.0, 10.0, -10.0, 10.0, -100.0, 100.0);
 
     glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    pl.transform();
 
     glEnable(GL_TEXTURE_2D);
     glBindTexture(GL_TEXTURE_2D, texture_id);
@@ -435,96 +433,50 @@ void main_window::paintGL ( )
     glNormalPointer(GL_DOUBLE, 0, normals.data());
     //glVertexAttribPointer(relocate_addr, 4, GL_DOUBLE, GL_FALSE, 0, relocations.data());
 
-    /*unsigned int buffer[512];
-    int hits;
-    glSelectBuffer(512, buffer);
-    glRenderMode(GL_SELECT);
-    glInitNames();
-    glPushName(0);
+    int old_move_sideward = pl.move_sideward;
 
-    int viewport[4];
-    glGetIntegerv(GL_VIEWPORT, viewport);
-
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    gluPickMatrix(width * 0.5, height * 0.5, 1.0, 1.0, viewport);
-    gluPerspective(45.0f, (GLfloat) (viewport[2]-viewport[0])/(GLfloat) (viewport[3]-viewport[1]), 0.1f, 100.0f);
-    glMatrixMode(GL_MODELVIEW);
-
-    for (int i = 0; i < indices.size(); ++i)
+    for (int i = 0; i < 2; ++i)
     {
-        auto sqr = [](double x){ return x * x; };
-        int cube_index = indices[i] / 6;
-        if (sqr(pl.x - cubes[cube_index].x) + sqr(pl.y - cubes[cube_index].y) + sqr(pl.z - cubes[cube_index].z) < 25)
+        const double dalpha = 0.2;
+        const double focus = 5000.0;
+
+        if (i == 0)
         {
-            glLoadName(indices[i]);
-            glDrawArrays(GL_QUADS, i * 4, 4);
+            pl.move_sideward = 1;
+            pl.alpha -= dalpha / focus;
+        }
+        if (i == 1)
+        {
+            pl.move_sideward = -1;
+            pl.alpha += dalpha / focus;
+        }
+
+        pl.fake_move(dalpha);
+
+        glLoadIdentity();
+        pl.transform();
+        glViewport(i * width / 2, 0, width / 2, height);
+        glDrawArrays(GL_QUADS, 0, indices.size() * 4);
+
+        pl.fake_move(-dalpha);
+
+        if (i == 0)
+        {
+            pl.alpha += dalpha / focus;
+        }
+        if (i == 1)
+        {
+            pl.alpha -= dalpha / focus;
         }
     }
 
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-
-    hits = glRenderMode(GL_RENDER);
-    if (hits > 0)
-    {
-        //qDebug("%i", hits);
-
-        int min = 0;
-
-        for (size_t i = 0; i < hits; ++i)
-        {
-            if (buffer[i * 4 + 1] < buffer[min * 4 + 1])
-            {
-                min = i;
-            }
-        }
-
-        size_t index = buffer[min * 4 + 3];
-        chosen_cube_index = index / 6;
-        chosen_plane_index = index % 6;
-
-        //qDebug("%ui", buffer[min * 4 + 1]);
-
-        if (index >= 0 && index < cubes.size() * 6)
-        {
-            has_chosen_plane = true;
-        }
-        else
-            has_chosen_plane = false;
-    }
-    else
-    {
-        has_chosen_plane = false;
-    }
-
-    if (has_chosen_plane)
-    for (int i = 0; i < indices.size(); ++i)
-    {
-        if (indices[i] == chosen_cube_index * 6 + chosen_plane_index)
-        {
-            for (int v = 0; v < 4; ++v)
-            {
-                colors[16 * i + v * 4 + 0] += 0.2;
-                colors[16 * i + v * 4 + 1] += 0.2;
-                colors[16 * i + v * 4 + 2] += 0.2;
-            }
-        }
-    }//*/
-
-    glDrawArrays(GL_QUADS, 0, indices.size() * 4);
+    pl.move_sideward = old_move_sideward;
 
     glDisable(GL_TEXTURE_2D);
 
-    glColor3ub(255, 0, 0);
-    for (const kubeman & k : kubemen)
-        k.draw();
-
     glDisable(GL_DEPTH_TEST);
 
-    glLoadIdentity();
+    /*glLoadIdentity();
 
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -534,13 +486,17 @@ void main_window::paintGL ( )
 
     glUseProgram(simple_program);
 
-    glColor3f(0.0, 0.0, 0.0);
-    glBegin(GL_LINES);
-        glVertex2d(-cross_size, 0.0);
-        glVertex2d(cross_size, 0.0);
-        glVertex2d(0.0, -cross_size);
-        glVertex2d(0.0, cross_size);
-    glEnd();
+    for (int i = 0; i < 2; ++i)
+    {
+        glViewport(i * width / 2, 0, width / 2, height);
+        glColor3f(0.0, 0.0, 0.0);
+        glBegin(GL_LINES);
+            glVertex2d(-cross_size, 0.0);
+            glVertex2d(cross_size, 0.0);
+            glVertex2d(0.0, -cross_size);
+            glVertex2d(0.0, cross_size);
+        glEnd();
+    }*/
 
     swapBuffers();
 
@@ -556,7 +512,7 @@ void main_window::paintGL ( )
         frames.pop();
 
         std::ostringstream oss;
-        oss << "Kubach. Try mouse buttons! FPS: " << (int)fps;
+        oss << pl.vy << " Kubach. Try mouse buttons! FPS: " << (int)fps;
         setWindowTitle(oss.str().c_str());
     }
 }
@@ -659,6 +615,7 @@ void main_window::keyPressEvent (QKeyEvent * keyEvent)
     {
         pl.x = world_size * 0.5;
         pl.y = 5.0;
+        pl.vy = 0;
         pl.z = world_size * 0.5;
         pl.init();
     }
@@ -759,6 +716,7 @@ void main_window::timerEvent (QTimerEvent *)
     if (enable_gravity)
         pl.vy -= g * last_frame;
     pl.move(speed * last_frame);
+    pl.smooth(speed * last_frame);
 
     bool old_on_surface = on_surface;
     double old_vy = pl.vy;
